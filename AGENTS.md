@@ -33,6 +33,7 @@ FUERA de alcance:
 - Evitar overengineering y abstracciones prematuras.
 - No crear un archivo por cada función si no es necesario.
 - Mantener cambios pequeños y revisables.
+- Siempre prefiere usar los package managers (PNPM y Cargo) para instalar dependencias, en lugar de escribir directamente a packages.json o Cargo.toml.
 
 ## Preferencias de flujo
 
