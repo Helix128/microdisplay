@@ -1,4 +1,4 @@
-import type { Screen } from "./design";
+import type { DesignElement, Screen } from "./design";
 
 export type Project = {
   schemaVersion: 1;
@@ -38,5 +38,38 @@ export function createProject(options: CreateProjectOptions = {}): Project {
       },
     ],
     activeScreenId: screenId,
+  };
+}
+
+export function getActiveScreen(project: Project): Screen {
+  return project.screens.find((screen) => screen.id === project.activeScreenId)!;
+}
+
+export function addScreen(project: Project, screen: Screen): Project {
+  return {
+    ...project,
+    screens: [...project.screens, screen],
+  };
+}
+
+export function setActiveScreen(project: Project, screenId: string): Project {
+  return {
+    ...project,
+    activeScreenId: screenId,
+  };
+}
+
+export function addElementToScreen(
+  project: Project,
+  screenId: string,
+  element: DesignElement,
+): Project {
+  return {
+    ...project,
+    screens: project.screens.map((screen) =>
+      screen.id === screenId
+        ? { ...screen, elements: [...screen.elements, element] }
+        : screen,
+    ),
   };
 }
