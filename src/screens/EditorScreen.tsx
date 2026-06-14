@@ -1,5 +1,6 @@
 import {
   HardDrive,
+  SaveAll,
   Download,
   LogOut,
   MousePointer2,
@@ -7,7 +8,7 @@ import {
   Slash,
   RectangleHorizontal,
 } from "lucide-react";
-import { type PointerEvent, type WheelEvent, useRef, useState } from "react";
+import { type PointerEvent, type WheelEvent, useEffect, useRef, useState } from "react";
 import {
   addElementToScreen,
   getActiveScreen,
@@ -24,6 +25,7 @@ import {
   ScreenPreview,
 } from "../preview/ScreenPreview";
 import { u8g2 } from "../exporters";
+import { projectStorage } from "../platform/projectStorage";
 import { createId } from "../utils/id";
 
 type Tool = "select" | "pan" | "rect" | "line";
@@ -35,6 +37,18 @@ type EditorScreenProps = {
   onExit: () => void;
   onProjectChange: (project: Project) => void;
 };
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return (
+    target.matches("input, textarea, select") ||
+    target.isContentEditable ||
+    target.closest("input, textarea, select, [contenteditable='true']") !== null
+  );
+}
 
 export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenProps) {
   const [tool, setTool] = useState<Tool>("select");
@@ -133,22 +147,61 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
     setSelectedElementId(null);
   }
 
-  function saveProject() {
-    const url = URL.createObjectURL(
-      new Blob([JSON.stringify(project, null, 2)], { type: "application/json" }),
-    );
-    const link = document.createElement("a");
+  async function saveProject() {
+    try {
+      await projectStorage.saveProject(project);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "No se pudo guardar el proyecto.");
+    }
+  }
 
-    link.href = url;
-    link.download = `${project.name || "microdisplay"}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+  async function saveProjectAs() {
+    try {
+      await projectStorage.saveProjectAs(project);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "No se pudo guardar el proyecto.");
+    }
   }
 
   async function copyExportCode() {
     await navigator.clipboard.writeText(exportCode);
     setCopyStatus("copied");
   }
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+
+      const shortcutKey = event.key.toLowerCase();
+      const modKey = event.ctrlKey || event.metaKey;
+
+      if (!modKey) {
+        return;
+      }
+
+      if (shortcutKey === "s") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          void saveProjectAs();
+          return;
+        }
+
+        void saveProject();
+        return;
+      }
+
+      if (shortcutKey === "e") {
+        event.preventDefault();
+        setShowExportPanel(true);
+        setCopyStatus("idle");
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [project]);
 
   function startPan(event: PointerEvent<HTMLDivElement>) {
     const shouldPan = tool === "pan" || event.button === 1;
@@ -221,7 +274,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
       className="editor-shell"
       tabIndex={0}
       onKeyDown={(event) => {
-        if (event.key === "Delete") {
+        if (event.key === "Delete" && !isEditableTarget(event.target)) {
           removeSelectedElement();
         }
       }}
@@ -269,8 +322,23 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
           <button type="button" aria-label="Salir" data-tooltip="Salir" onClick={onExit}>
             <LogOut />
           </button>
-          <button type="button" aria-label="Guardar" data-tooltip="Guardar" onClick={saveProject}>
+          <button
+            className="toolbar-primary-action"
+            type="button"
+            aria-label="Guardar"
+            data-tooltip="Guardar"
+            onClick={saveProject}
+          >
             <HardDrive />
+          </button>
+          <button
+            className="toolbar-secondary-action"
+            type="button"
+            aria-label="Guardar como"
+            data-tooltip="Guardar como"
+            onClick={saveProjectAs}
+          >
+            <SaveAll />
           </button>
           <button
             type="button"
