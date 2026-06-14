@@ -10,12 +10,18 @@ export function generateProject(project: Project): string {
   return project.screens
     .map((screen) => {
       const functionName = toFunctionName(screen.name, usedNames);
-      const body = generateScreen(screen)
+      const body = generateScreen(screen);
+
+      if (!body) {
+        return `void ${functionName}() {\n}`;
+      }
+
+      const indentedBody = body
         .split("\n")
         .map((line) => `  ${line}`)
         .join("\n");
 
-      return `void ${functionName}() {${body ? `\n${body}\n` : "\n"}}`;
+      return `void ${functionName}() {\n${indentedBody}\n}`;
     })
     .join("\n\n");
 }
