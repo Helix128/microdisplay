@@ -73,3 +73,21 @@ export function addElementToScreen(
     ),
   };
 }
+
+export function removeElementFromScreen(
+  project: Project,
+  screenId: string,
+  elementId: string,
+): Project {
+  return {
+    ...project,
+    screens: project.screens.map((screen) =>
+      screen.id === screenId
+        ? {
+            ...screen,
+            elements: screen.elements.filter((element) => element.id !== elementId),
+          }
+        : screen,
+    ),
+  };
+}
