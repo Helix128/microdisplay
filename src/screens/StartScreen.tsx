@@ -1,65 +1,280 @@
-import { type FormEvent, useState } from "react";
-import { createProject, type Project } from "../core";
+import { type FormEvent, useEffect, useState } from "react";
+import { createProject, getActiveScreen, type Project } from "../core";
+import { ScreenPreview } from "../preview/ScreenPreview";
+import { projectStorage, type StoredProject } from "../platform/projectStorage";
 import { createId } from "../utils/id";
 
 type StartScreenProps = {
   onCreateProject: (project: Project) => void;
 };
 
+const PRESETS = [
+  { name: "128 × 64", width: 128, height: 64 },
+  { name: "128 × 32", width: 128, height: 32 },
+  { name: "96 × 16", width: 96, height: 16 },
+  { name: "64 × 48", width: 64, height: 48 },
+  { name: "64 × 32", width: 64, height: 32 },
+];
+
 export function StartScreen({ onCreateProject }: StartScreenProps) {
   const [name, setName] = useState("Untitled");
   const [width, setWidth] = useState(128);
   const [height, setHeight] = useState(64);
+  const [projects, setProjects] = useState<StoredProject[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  function createNewProject(event: FormEvent<HTMLFormElement>) {
+  const [resolutionPreset, setResolutionPreset] = useState<string>(() => {
+    const idx = PRESETS.findIndex((p) => p.width === 128 && p.height === 64);
+    return idx !== -1 ? String(idx) : "custom";
+  });
+
+  useEffect(() => {
+    let mounted = true;
+
+    projectStorage
+      .listProjects()
+      .then((storedProjects) => {
+        if (mounted) {
+          setProjects(storedProjects);
+        }
+      })
+      .catch((currentError) => {
+        if (mounted) {
+          setProjects([]);
+          setError(
+            currentError instanceof Error
+              ? currentError.message
+              : "No se pudo cargar la lista de proyectos.",
+          );
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setIsLoadingProjects(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function createNewProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    onCreateProject(
-      createProject({
+    try {
+      setError(null);
+
+      const project = createProject({
         name,
         width,
         height,
         screenId: createId("screen"),
-      }),
-    );
+      });
+
+      await projectStorage.createProject(project);
+      onCreateProject(project);
+    } catch (currentError) {
+      setError(
+        currentError instanceof Error
+          ? currentError.message
+          : "No se pudo crear el proyecto.",
+      );
+    }
+  }
+
+  async function openProject() {
+    try {
+      setError(null);
+
+      const project = await projectStorage.openProject();
+
+      if (project !== null) {
+        onCreateProject(project);
+      }
+    } catch (currentError) {
+      setError(
+        currentError instanceof Error
+          ? currentError.message
+          : "No se pudo abrir el proyecto.",
+      );
+    }
+  }
+
+  async function openStoredProject(projectId: string) {
+    try {
+      setError(null);
+
+      const project = await projectStorage.openStoredProject(projectId);
+
+      if (project !== null) {
+        onCreateProject(project);
+      }
+    } catch (currentError) {
+      setError(
+        currentError instanceof Error
+          ? currentError.message
+          : "No se pudo abrir el proyecto.",
+      );
+    }
   }
 
   return (
     <main className="start-shell">
-      <section className="panel start-panel">
-        <h1>microdisplay</h1>
-        <form className="editor-form" onSubmit={createNewProject}>
-          <label>
-            Nombre
-            <input
-              value={name}
-              onChange={(event) => setName(event.currentTarget.value)}
-            />
-          </label>
+      <aside className="start-sidebar">
+        <div className="start-brand">
+          <h1>microdisplay</h1>
+        </div>
 
-          <div className="field-grid">
+        <section className="start-create-panel">
+          <h2>Nuevo proyecto</h2>
+
+          <form className="editor-form" onSubmit={createNewProject}>
             <label>
-              Width
+              Nombre
               <input
-                type="number"
-                value={width}
-                onChange={(event) => setWidth(event.currentTarget.valueAsNumber)}
+                value={name}
+                onChange={(event) => setName(event.currentTarget.value)}
               />
             </label>
-            <label>
-              Height
-              <input
-                type="number"
-                value={height}
-                onChange={(event) => setHeight(event.currentTarget.valueAsNumber)}
-              />
-            </label>
-          </div>
 
-          <button className="primary-button" type="submit">
-            Crear proyecto
+            <div className="preset-container">
+              <label>
+                Resolución
+                <select
+                  value={resolutionPreset}
+                  onChange={(event) => {
+                    const val = event.currentTarget.value;
+                    setResolutionPreset(val);
+                    if (val !== "custom") {
+                      const preset = PRESETS[Number(val)];
+                      setWidth(preset.width);
+                      setHeight(preset.height);
+                    }
+                  }}
+                >
+                  {PRESETS.map((preset, index) => (
+                    <option key={preset.name} value={String(index)}>
+                      {preset.name}
+                    </option>
+                  ))}
+                  <option value="custom">Personalizado</option>
+                </select>
+              </label>
+            </div>
+
+            {resolutionPreset === "custom" && (
+              <div className="field-grid">
+                <label>
+                  Ancho (px)
+                  <input
+                    type="number"
+                    value={width}
+                    onChange={(event) => setWidth(event.currentTarget.valueAsNumber || 0)}
+                  />
+                </label>
+                <label>
+                  Alto (px)
+                  <input
+                    type="number"
+                    value={height}
+                    onChange={(event) => setHeight(event.currentTarget.valueAsNumber || 0)}
+                  />
+                </label>
+              </div>
+            )}
+
+            <div className="start-actions">
+              <button className="primary-button" type="submit">
+                Crear proyecto
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <div className="start-sidebar-footer">
+          <div className="sidebar-divider"></div>
+          <button className="secondary-button open-project-btn" type="button" onClick={openProject}>
+            Abrir desde JSON…
           </button>
-        </form>
+          {error !== null ? <p className="error-message start-error">{error}</p> : null}
+        </div>
+      </aside>
+
+      <section className="start-projects-panel">
+        <header className="start-projects-header">
+          <h2>Proyectos guardados</h2>
+          <span className="projects-count">
+            {projects.length} {projects.length === 1 ? "proyecto" : "proyectos"}
+          </span>
+        </header>
+
+        <div className="start-projects-body">
+          {isLoadingProjects ? (
+            <p className="start-status">Cargando proyectos…</p>
+          ) : null}
+
+          {!isLoadingProjects && projects.length === 0 ? (
+            <div className="start-empty-state">
+              <p>No hay proyectos guardados localmente.</p>
+              <p className="start-status">Crea uno nuevo usando el panel lateral o abre un archivo existente.</p>
+            </div>
+          ) : null}
+
+          <div className="project-grid">
+            {projects.map((storedProject) => {
+              const activeScreen = getActiveScreen(storedProject.project);
+
+              return (
+                <article
+                  key={storedProject.id}
+                  className="project-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openStoredProject(storedProject.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openStoredProject(storedProject.id);
+                    }
+                  }}
+                >
+                  <div className="project-card-preview">
+                    <ScreenPreview
+                      device={storedProject.project.device}
+                      screen={activeScreen}
+                      selectedElementId={null}
+                      draftElement={null}
+                    />
+                  </div>
+
+                  <div className="project-card-body">
+                    <div className="project-card-head">
+                      <div className="project-card-title-group">
+                        <strong>{storedProject.project.name}</strong>
+                        <p className="project-card-subtitle">Activa: {activeScreen.name}</p>
+                      </div>
+                      <span className="project-card-menu" aria-hidden="true">
+                        ⋯
+                      </span>
+                    </div>
+
+                    <div className="project-card-meta">
+                      <span>
+                        {storedProject.project.device.width} × {storedProject.project.device.height}
+                      </span>
+                      <span>
+                        {storedProject.project.screens.length}{" "}
+                        {storedProject.project.screens.length === 1 ? "pantalla" : "pantallas"}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
       </section>
     </main>
   );
