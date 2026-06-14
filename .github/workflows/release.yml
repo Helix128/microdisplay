@@ -66,23 +66,18 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'microdisplay ${{ github.ref_name }}'
+          args: ${{ matrix.platform == 'windows-latest' && '--bundles nsis' || '' }}
           releaseBody: |
-            ### Windows
-            | Tipo | Archivo |
-            | --- | --- |
-            | Setup .exe | [Descargar](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/microdisplay_${{ steps.get_version.outputs.version }}_x64-setup.exe) |
-            | Portable .exe | [Descargar](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/microdisplay_${{ steps.get_version.outputs.version }}_x64-portable.exe) |
+            Windows:
+            - Setup: [microdisplay_${{ steps.get_version.outputs.version }}_x64-setup.exe](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/microdisplay_${{ steps.get_version.outputs.version }}_x64-setup.exe)
+            - Portable: [microdisplay_${{ steps.get_version.outputs.version }}_x64-portable.exe](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/microdisplay_${{ steps.get_version.outputs.version }}_x64-portable.exe)
             
-            ### Linux
-            | Tipo | Archivo |
-            | --- | --- |
-            | AppImage | [Descargar](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/microdisplay_${{ steps.get_version.outputs.version }}_amd64.AppImage) |
-            | Paquete .deb | [Descargar](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/microdisplay_${{ steps.get_version.outputs.version }}_amd64.deb) |
+            Linux:
+            - AppImage: [microdisplay_${{ steps.get_version.outputs.version }}_amd64.AppImage](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/microdisplay_${{ steps.get_version.outputs.version }}_amd64.AppImage)
+            - Debian/Ubuntu: [microdisplay_${{ steps.get_version.outputs.version }}_amd64.deb](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/microdisplay_${{ steps.get_version.outputs.version }}_amd64.deb)
             
-            ### macOS
-            | Tipo | Archivo |
-            | --- | --- |
-            | Apple Silicon .dmg | [Descargar](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/microdisplay_${{ steps.get_version.outputs.version }}_aarch64.dmg) |
+            macOS:
+            - Apple Silicon: [microdisplay_${{ steps.get_version.outputs.version }}_aarch64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/microdisplay_${{ steps.get_version.outputs.version }}_aarch64.dmg)
           releaseDraft: true
           prerelease: false
 
