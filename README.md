@@ -1,3 +1,9 @@
-# µDisplay Studio (a.k.a MicroDisplay Studio)
+# µDisplay Studio
 
-Diseñador visual de interfaces para pantallas OLED para microcontroladores.
+µDisplay Studio es un editor visual para diseñar pantallas OLED monocolor en microcontroladores.
+
+## Estado actual
+- Crea y guarda pantallas con elementos básicos.
+- Permite dibujar líneas y rectángulos (TODO: círculos, texto e imágenes).
+- Permite mover, editar y borrar elementos.
+- Exporta código U8G2.

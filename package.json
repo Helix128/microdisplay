@@ -2,6 +2,7 @@
   "name": "microdisplay",
   "private": true,
   "version": "0.1.1",
+  "license": "MPL-2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
