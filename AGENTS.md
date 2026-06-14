@@ -44,6 +44,8 @@ Antes de escribir código...
 - Añade o actualiza tests cuando sea razonable
 
 Después de escribir código...
-- Explica qué cambiaste
+- Explica qué cambiaste, por qué lo cambiaste y cómo lo hiciste
+- Define si este cambio constituye un refactor, una nueva feature o una corrección de bug
+- Decide si lo que acabas de hacer cumple un objetivo completo digno de un commit, o es un paso intermedio que debería combinarse con otros cambios relacionados
 - Menciona riesgos o cosas a tener en cuenta
 - Concluye con qué tareas quedan pendientes o qué sigue después de este cambio
