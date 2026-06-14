@@ -63,3 +63,14 @@ jobs:
           releaseBody: 'Release automático generado por GitHub Actions.'
           releaseDraft: true
           prerelease: false
+
+      - name: Upload Portable Windows EXE
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          $filename = "microdisplay-$version-portable-x64.exe"
+          Copy-Item src-tauri/target/release/microdisplay.exe src-tauri/target/release/$filename
+          gh release upload ${{ github.ref_name }} src-tauri/target/release/$filename --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
