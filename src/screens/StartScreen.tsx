@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
+import { MoreVertical, Trash2 } from "lucide-react";
 import { createProject, getActiveScreen, type Project } from "../core";
 import { ScreenPreview } from "../preview/ScreenPreview";
 import { projectStorage, type StoredProject } from "../platform/projectStorage";
@@ -23,6 +24,7 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeMenuProjectId, setActiveMenuProjectId] = useState<string | null>(null);
 
   const [resolutionPreset, setResolutionPreset] = useState<string>(() => {
     const idx = PRESETS.findIndex((p) => p.width === 128 && p.height === 64);
@@ -116,6 +118,27 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
         currentError instanceof Error
           ? currentError.message
           : "No se pudo abrir el proyecto.",
+      );
+    }
+  }
+
+  async function handleDeleteProject(projectId: string, projectName: string) {
+    const confirmed = window.confirm(`¿Estás seguro de que deseas eliminar el proyecto "${projectName}"?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError(null);
+      await projectStorage.deleteProject(projectId);
+      setProjects((prevProjects) => prevProjects.filter((p) => p.id !== projectId));
+      setActiveMenuProjectId(null);
+    } catch (currentError) {
+      setError(
+        currentError instanceof Error
+          ? currentError.message
+          : "No se pudo eliminar el proyecto.",
       );
     }
   }
@@ -255,9 +278,34 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
                         <strong>{storedProject.project.name}</strong>
                         <p className="project-card-subtitle">Activa: {activeScreen.name}</p>
                       </div>
-                      <span className="project-card-menu" aria-hidden="true">
-                        ⋯
-                      </span>
+                      <div className="project-card-menu-container">
+                        <button
+                          type="button"
+                          className="project-card-menu-btn"
+                          aria-label="Opciones de proyecto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuProjectId(activeMenuProjectId === storedProject.id ? null : storedProject.id);
+                          }}
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                        {activeMenuProjectId === storedProject.id && (
+                          <div className="project-card-dropdown">
+                            <button
+                              type="button"
+                              className="dropdown-item delete-item"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteProject(storedProject.id, storedProject.project.name);
+                              }}
+                            >
+                              <Trash2 size={14} />
+                              <span>Eliminar</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="project-card-meta">
@@ -276,6 +324,9 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
           </div>
         </div>
       </section>
+      {activeMenuProjectId !== null && (
+        <div className="dropdown-backdrop" onClick={() => setActiveMenuProjectId(null)} />
+      )}
     </main>
   );
 }

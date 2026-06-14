@@ -68,6 +68,11 @@ export const browserProjectStorage: ProjectStorage = {
     rememberProjectId(id);
     return storedProject.project;
   },
+
+  async deleteProject(id) {
+    localStorage.removeItem(projectStorageKey(id));
+    removeProjectFromIndex(id);
+  },
 };
 
 function saveStoredProject(id: string, project: Project) {

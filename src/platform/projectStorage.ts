@@ -15,6 +15,7 @@ export type ProjectStorage = {
   getLastProject(): Promise<Project | null>;
   listProjects(): Promise<StoredProject[]>;
   openStoredProject(id: string): Promise<Project | null>;
+  deleteProject(id: string): Promise<void>;
 };
 
 export const projectStorage: ProjectStorage = isTauriRuntime()

@@ -1,6 +1,6 @@
 import { documentDir, join } from "@tauri-apps/api/path";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { BaseDirectory, mkdir, readDir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { BaseDirectory, mkdir, readDir, readTextFile, remove, writeTextFile } from "@tauri-apps/plugin-fs";
 import { parseProjectJson } from "../../core/projectFile";
 import type { Project } from "../../core";
 import type { ProjectStorage, StoredProject } from "../projectStorage";
@@ -81,6 +81,13 @@ export const tauriProjectStorage: ProjectStorage = {
     const project = await readProjectFile(id);
     rememberProjectPath(id);
     return project;
+  },
+
+  async deleteProject(id) {
+    await remove(id);
+    if (currentProjectPath === id) {
+      forgetProjectPath();
+    }
   },
 };
 
