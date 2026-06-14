@@ -29,10 +29,10 @@ type ScreenPreviewProps = {
   screen: Screen;
   selectedElementId: string | null;
   draftElement: DraftElement | null;
-  onPointerDown: (point: Point) => void;
-  onPointerMove: (point: Point) => void;
-  onPointerUp: (point: Point) => void;
-  onElementPointerDown: (elementId: string) => void;
+  onPointerDown?: (point: Point) => void;
+  onPointerMove?: (point: Point) => void;
+  onPointerUp?: (point: Point) => void;
+  onElementPointerDown?: (elementId: string) => void;
 };
 
 export function ScreenPreview({
@@ -62,12 +62,16 @@ export function ScreenPreview({
       viewBox={`0 0 ${device.width} ${device.height}`}
       role="img"
       aria-label={`Vista previa de ${screen.name}`}
-      onPointerDown={(event) => {
-        event.currentTarget.setPointerCapture(event.pointerId);
-        onPointerDown(getPoint(event));
-      }}
-      onPointerMove={(event) => onPointerMove(getPoint(event))}
-      onPointerUp={(event) => onPointerUp(getPoint(event))}
+      onPointerDown={
+        onPointerDown === undefined
+          ? undefined
+          : (event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              onPointerDown(getPoint(event));
+            }
+      }
+      onPointerMove={onPointerMove === undefined ? undefined : (event) => onPointerMove(getPoint(event))}
+      onPointerUp={onPointerUp === undefined ? undefined : (event) => onPointerUp(getPoint(event))}
     >
       <rect width={device.width} height={device.height} fill="black" />
       {screen.elements.map((element) => {
@@ -86,10 +90,14 @@ export function ScreenPreview({
                 stroke={selected ? "#999" : element.filled ? "none" : "white"}
                 strokeDasharray={selected ? "2 1" : undefined}
                 strokeWidth={1}
-                onPointerDown={(event) => {
-                  event.stopPropagation();
-                  onElementPointerDown(element.id);
-                }}
+                onPointerDown={
+                  onElementPointerDown === undefined
+                    ? undefined
+                    : (event) => {
+                        event.stopPropagation();
+                        onElementPointerDown(element.id);
+                      }
+                }
               />
             );
           case "line":
@@ -103,10 +111,14 @@ export function ScreenPreview({
                 stroke={selected ? "#999" : "white"}
                 strokeDasharray={selected ? "2 1" : undefined}
                 strokeWidth={1}
-                onPointerDown={(event) => {
-                  event.stopPropagation();
-                  onElementPointerDown(element.id);
-                }}
+                onPointerDown={
+                  onElementPointerDown === undefined
+                    ? undefined
+                    : (event) => {
+                        event.stopPropagation();
+                        onElementPointerDown(element.id);
+                      }
+                }
               />
             );
         }
