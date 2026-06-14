@@ -8,7 +8,15 @@ import {
   Slash,
   RectangleHorizontal,
 } from "lucide-react";
-import { type PointerEvent, type WheelEvent, useEffect, useRef, useState } from "react";
+import {
+  type PointerEvent,
+  type WheelEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   addElementToScreen,
   getActiveScreen,
@@ -61,116 +69,154 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const [panOrigin, setPanOrigin] = useState<Point | null>(null);
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
-  const [draggedElement, setDraggedElement] = useState<DesignElement | null>(null);
+  const [dragPreviewElement, setDragPreviewElement] = useState<DesignElement | null>(null);
   const artboardRef = useRef<HTMLDivElement>(null);
+  const dragOriginalElementRef = useRef<DesignElement | null>(null);
+  const viewportOffsetRef = useRef(viewportOffset);
+  const panFrameRef = useRef<number | null>(null);
+  const pendingViewportOffsetRef = useRef<Point | null>(null);
 
-  const activeScreen = getActiveScreen(project);
-  const selectedElement =
-    activeScreen.elements.find((element) => element.id === selectedElementId) ?? null;
-  const draftElement = getDraftElement(tool, dragStart, dragCurrent);
-  const exportCode = u8g2.generateProject(project);
+  useEffect(() => {
+    viewportOffsetRef.current = viewportOffset;
+  }, [viewportOffset]);
 
-  function handlePreviewPointerDown(point: Point) {
-    if (tool === "select") {
-      setSelectedElementId(null);
-      return;
-    }
+  const activeScreen = useMemo(() => getActiveScreen(project), [project]);
+  const selectedElement = useMemo(
+    () => activeScreen.elements.find((element) => element.id === selectedElementId) ?? null,
+    [activeScreen, selectedElementId],
+  );
+  const draftElement = useMemo(() => getDraftElement(tool, dragStart, dragCurrent), [tool, dragStart, dragCurrent]);
+  const exportCode = useMemo(
+    () => (showExportPanel ? u8g2.generateProject(project) : ""),
+    [project, showExportPanel],
+  );
 
-    if (tool === "rect" || tool === "line") {
-      setDragStart(point);
-      setDragCurrent(point);
-    }
-  }
-
-  function handlePreviewPointerMove(point: Point) {
-    if (tool === "select" && draggedElement !== null && dragStart !== null) {
-      const dx = point.x - dragStart.x;
-      const dy = point.y - dragStart.y;
-
-      if (draggedElement.type === "rect") {
-        const updated: RectElement = {
-          ...draggedElement,
-          x: draggedElement.x + dx,
-          y: draggedElement.y + dy,
-        };
-        updateSelectedElement(updated);
-      } else if (draggedElement.type === "line") {
-        const updated: LineElement = {
-          ...draggedElement,
-          x1: draggedElement.x1 + dx,
-          y1: draggedElement.y1 + dy,
-          x2: draggedElement.x2 + dx,
-          y2: draggedElement.y2 + dy,
-        };
-        updateSelectedElement(updated);
+  const handlePreviewPointerDown = useCallback(
+    (point: Point) => {
+      if (tool === "select") {
+        setSelectedElementId(null);
+        dragOriginalElementRef.current = null;
+        setDragPreviewElement(null);
+        return;
       }
-      return;
-    }
 
-    if (dragStart !== null) {
-      setDragCurrent(point);
-    }
-  }
+      if (tool === "rect" || tool === "line") {
+        setDragStart(point);
+        setDragCurrent(point);
+      }
+    },
+    [tool],
+  );
 
-  function handlePreviewPointerUp(point: Point) {
-    if (draggedElement !== null) {
-      setDraggedElement(null);
-      setDragStart(null);
-      return;
-    }
+  const handlePreviewPointerMove = useCallback(
+    (point: Point) => {
+      if (tool === "select" && dragStart !== null && dragOriginalElementRef.current !== null) {
+        const dx = point.x - dragStart.x;
+        const dy = point.y - dragStart.y;
+        const original = dragOriginalElementRef.current;
 
-    if (dragStart === null) {
-      return;
-    }
+        if (original.type === "rect") {
+          setDragPreviewElement({
+            ...original,
+            x: original.x + dx,
+            y: original.y + dy,
+          });
+        } else {
+          setDragPreviewElement({
+            ...original,
+            x1: original.x1 + dx,
+            y1: original.y1 + dy,
+            x2: original.x2 + dx,
+            y2: original.y2 + dy,
+          });
+        }
+        return;
+      }
 
-    if (tool === "rect") {
-      const rect = createRectFromPoints(dragStart, point);
+      if (dragStart !== null) {
+        setDragCurrent(point);
+      }
+    },
+    [dragStart, tool],
+  );
 
-      if (rect.width > 0 && rect.height > 0) {
-        const element: RectElement = {
-          id: createId("rect"),
-          type: "rect",
-          filled: false,
-          ...rect,
+  const handlePreviewPointerUp = useCallback(
+    (point: Point) => {
+      if (dragOriginalElementRef.current !== null && dragPreviewElement !== null) {
+        if (dragPreviewElement !== dragOriginalElementRef.current) {
+          onProjectChange(
+            updateElementInScreen(project, project.activeScreenId, dragPreviewElement),
+          );
+        }
+        dragOriginalElementRef.current = null;
+        setDragPreviewElement(null);
+        setDragStart(null);
+        setDragCurrent(null);
+        return;
+      }
+
+      if (dragStart === null) {
+        return;
+      }
+
+      if (tool === "rect") {
+        const rect = createRectFromPoints(dragStart, point);
+
+        if (rect.width > 0 && rect.height > 0) {
+          const element: RectElement = {
+            id: createId("rect"),
+            type: "rect",
+            filled: false,
+            ...rect,
+          };
+
+          onProjectChange(addElementToScreen(project, project.activeScreenId, element));
+          setSelectedElementId(element.id);
+        }
+      }
+
+      if (tool === "line" && (dragStart.x !== point.x || dragStart.y !== point.y)) {
+        const element: LineElement = {
+          id: createId("line"),
+          type: "line",
+          x1: dragStart.x,
+          y1: dragStart.y,
+          x2: point.x,
+          y2: point.y,
         };
 
         onProjectChange(addElementToScreen(project, project.activeScreenId, element));
         setSelectedElementId(element.id);
       }
-    }
 
-    if (tool === "line" && (dragStart.x !== point.x || dragStart.y !== point.y)) {
-      const element: LineElement = {
-        id: createId("line"),
-        type: "line",
-        x1: dragStart.x,
-        y1: dragStart.y,
-        x2: point.x,
-        y2: point.y,
-      };
+      setDragStart(null);
+      setDragCurrent(null);
+    },
+    [dragPreviewElement, dragStart, onProjectChange, project, tool],
+  );
 
-      onProjectChange(addElementToScreen(project, project.activeScreenId, element));
-      setSelectedElementId(element.id);
-    }
-
-    setDragStart(null);
-    setDragCurrent(null);
-  }
-
-  function handleElementPointerDown(elementId: string, point: Point) {
-    if (tool === "select") {
-      setSelectedElementId(elementId);
-      const element = activeScreen.elements.find((el) => el.id === elementId);
-      if (element) {
-        setDraggedElement(element);
-        setDragStart(point);
+  const handleElementPointerDown = useCallback(
+    (elementId: string, point: Point) => {
+      if (tool === "select") {
+        setSelectedElementId(elementId);
+        const element = activeScreen.elements.find((el) => el.id === elementId);
+        if (element) {
+          dragOriginalElementRef.current = element;
+          setDragPreviewElement(element);
+          setDragStart(point);
+          setDragCurrent(point);
+        }
       }
-    }
-  }
+    },
+    [activeScreen.elements, tool],
+  );
 
-  function updateSelectedElement(element: DesignElement) {
-    onProjectChange(updateElementInScreen(project, project.activeScreenId, element));
-  }
+  const updateSelectedElement = useCallback(
+    (element: DesignElement) => {
+      onProjectChange(updateElementInScreen(project, project.activeScreenId, element));
+    },
+    [onProjectChange, project],
+  );
 
   function removeSelectedElement() {
     if (selectedElementId === null) {
@@ -180,29 +226,31 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
     onProjectChange(
       removeElementFromScreen(project, project.activeScreenId, selectedElementId),
     );
+    dragOriginalElementRef.current = null;
+    setDragPreviewElement(null);
     setSelectedElementId(null);
   }
 
-  async function saveProject() {
+  const saveProject = useCallback(async () => {
     try {
       await projectStorage.saveProject(project);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "No se pudo guardar el proyecto.");
     }
-  }
+  }, [project]);
 
-  async function saveProjectAs() {
+  const saveProjectAs = useCallback(async () => {
     try {
       await projectStorage.saveProjectAs(project);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "No se pudo guardar el proyecto.");
     }
-  }
+  }, [project]);
 
-  async function copyExportCode() {
+  const copyExportCode = useCallback(async () => {
     await navigator.clipboard.writeText(exportCode);
     setCopyStatus("copied");
-  }
+  }, [exportCode]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -239,37 +287,71 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [project]);
 
-  function startPan(event: PointerEvent<HTMLDivElement>) {
-    const shouldPan = tool === "pan" || event.button === 1;
+  const startPan = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      const shouldPan = tool === "pan" || event.button === 1;
 
-    if (!shouldPan) {
-      return;
-    }
+      if (!shouldPan) {
+        return;
+      }
 
-    event.preventDefault();
-    event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setPanStart({ x: event.clientX, y: event.clientY });
-    setPanOrigin(viewportOffset);
-  }
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setPanStart({ x: event.clientX, y: event.clientY });
+      setPanOrigin(viewportOffsetRef.current);
+    },
+    [tool],
+  );
 
-  function movePan(event: PointerEvent<HTMLDivElement>) {
+  const movePan = useCallback((event: PointerEvent<HTMLDivElement>) => {
     if (panStart === null || panOrigin === null) {
       return;
     }
 
-    setViewportOffset({
+    pendingViewportOffsetRef.current = {
       x: panOrigin.x + event.clientX - panStart.x,
       y: panOrigin.y + event.clientY - panStart.y,
-    });
-  }
+    };
 
-  function endPan() {
+    if (panFrameRef.current !== null) {
+      return;
+    }
+
+    panFrameRef.current = window.requestAnimationFrame(() => {
+      panFrameRef.current = null;
+      if (pendingViewportOffsetRef.current !== null) {
+        viewportOffsetRef.current = pendingViewportOffsetRef.current;
+        setViewportOffset(pendingViewportOffsetRef.current);
+      }
+    });
+  }, [panOrigin, panStart]);
+
+  const endPan = useCallback(() => {
+    if (panFrameRef.current !== null) {
+      window.cancelAnimationFrame(panFrameRef.current);
+      panFrameRef.current = null;
+    }
+
+    if (pendingViewportOffsetRef.current !== null) {
+      viewportOffsetRef.current = pendingViewportOffsetRef.current;
+      setViewportOffset(pendingViewportOffsetRef.current);
+      pendingViewportOffsetRef.current = null;
+    }
+
     setPanStart(null);
     setPanOrigin(null);
-  }
+  }, []);
 
-  function zoomViewport(event: WheelEvent<HTMLDivElement>) {
+  useEffect(() => {
+    return () => {
+      if (panFrameRef.current !== null) {
+        window.cancelAnimationFrame(panFrameRef.current);
+      }
+    };
+  }, []);
+
+  const zoomViewport = useCallback((event: WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
 
     const artboard = artboardRef.current;
@@ -293,17 +375,21 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
       return;
     }
 
+    const currentOffset = viewportOffsetRef.current;
     const worldPoint = {
-      x: (cursor.x - artboardOrigin.x - viewportOffset.x) / zoom,
-      y: (cursor.y - artboardOrigin.y - viewportOffset.y) / zoom,
+      x: (cursor.x - artboardOrigin.x - currentOffset.x) / zoom,
+      y: (cursor.y - artboardOrigin.y - currentOffset.y) / zoom,
     };
 
-    setViewportOffset({
+    const nextOffset = {
       x: cursor.x - artboardOrigin.x - worldPoint.x * nextZoom,
       y: cursor.y - artboardOrigin.y - worldPoint.y * nextZoom,
-    });
+    };
+
+    viewportOffsetRef.current = nextOffset;
+    setViewportOffset(nextOffset);
     setZoom(nextZoom);
-  }
+  }, [zoom]);
 
   return (
     <main
@@ -410,6 +496,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
             screen={activeScreen}
             selectedElementId={selectedElementId}
             draftElement={draftElement}
+            dragPreviewElement={dragPreviewElement}
             onPointerDown={handlePreviewPointerDown}
             onPointerMove={handlePreviewPointerMove}
             onPointerUp={handlePreviewPointerUp}

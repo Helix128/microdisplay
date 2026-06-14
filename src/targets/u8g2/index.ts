@@ -1,3 +1,3 @@
 export { generateProject, generateScreen } from "./exporter";
-export { rasterizeLine } from "./raster";
-export type { RasterPoint } from "./raster";
+export { rasterizeLine, rasterizeLineRuns } from "./raster";
+export type { RasterPoint, RasterRun } from "./raster";

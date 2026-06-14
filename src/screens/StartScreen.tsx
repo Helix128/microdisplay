@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, memo, useCallback, useEffect, useState } from "react";
 import { MoreVertical, Trash2 } from "lucide-react";
 import { createProject, getActiveScreen, type Project } from "../core";
 import { ScreenPreview } from "../preview/ScreenPreview";
@@ -86,43 +86,32 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
     }
   }
 
-  async function openProject() {
-    try {
-      setError(null);
+  const openStoredProject = useCallback(
+    async (projectId: string) => {
+      try {
+        setError(null);
 
-      const project = await projectStorage.openProject();
+        const project = await projectStorage.openStoredProject(projectId);
 
-      if (project !== null) {
-        onCreateProject(project);
+        if (project !== null) {
+          onCreateProject(project);
+        }
+      } catch (currentError) {
+        setError(
+          currentError instanceof Error
+            ? currentError.message
+            : "No se pudo abrir el proyecto.",
+        );
       }
-    } catch (currentError) {
-      setError(
-        currentError instanceof Error
-          ? currentError.message
-          : "No se pudo abrir el proyecto.",
-      );
-    }
-  }
+    },
+    [onCreateProject],
+  );
 
-  async function openStoredProject(projectId: string) {
-    try {
-      setError(null);
+  const toggleMenuProject = useCallback((projectId: string) => {
+    setActiveMenuProjectId((current) => (current === projectId ? null : projectId));
+  }, []);
 
-      const project = await projectStorage.openStoredProject(projectId);
-
-      if (project !== null) {
-        onCreateProject(project);
-      }
-    } catch (currentError) {
-      setError(
-        currentError instanceof Error
-          ? currentError.message
-          : "No se pudo abrir el proyecto.",
-      );
-    }
-  }
-
-  async function handleDeleteProject(projectId: string, projectName: string) {
+  const handleDeleteProject = useCallback(async (projectId: string, projectName: string) => {
     const confirmed = window.confirm(`¿Estás seguro de que deseas eliminar el proyecto "${projectName}"?`);
 
     if (!confirmed) {
@@ -139,6 +128,24 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
         currentError instanceof Error
           ? currentError.message
           : "No se pudo eliminar el proyecto.",
+      );
+    }
+  }, []);
+
+  async function openProject() {
+    try {
+      setError(null);
+
+      const project = await projectStorage.openProject();
+
+      if (project !== null) {
+        onCreateProject(project);
+      }
+    } catch (currentError) {
+      setError(
+        currentError instanceof Error
+          ? currentError.message
+          : "No se pudo abrir el proyecto.",
       );
     }
   }
@@ -246,81 +253,16 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
           ) : null}
 
           <div className="project-grid">
-            {projects.map((storedProject) => {
-              const activeScreen = getActiveScreen(storedProject.project);
-
-              return (
-                <article
-                  key={storedProject.id}
-                  className="project-card"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openStoredProject(storedProject.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      openStoredProject(storedProject.id);
-                    }
-                  }}
-                >
-                  <div className="project-card-preview">
-                    <ScreenPreview
-                      device={storedProject.project.device}
-                      screen={activeScreen}
-                      selectedElementId={null}
-                      draftElement={null}
-                    />
-                  </div>
-
-                  <div className="project-card-body">
-                    <div className="project-card-head">
-                      <div className="project-card-title-group">
-                        <strong>{storedProject.project.name}</strong>
-                        <p className="project-card-subtitle">Activa: {activeScreen.name}</p>
-                      </div>
-                      <div className="project-card-menu-container">
-                        <button
-                          type="button"
-                          className="project-card-menu-btn"
-                          aria-label="Opciones de proyecto"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveMenuProjectId(activeMenuProjectId === storedProject.id ? null : storedProject.id);
-                          }}
-                        >
-                          <MoreVertical size={16} />
-                        </button>
-                        {activeMenuProjectId === storedProject.id && (
-                          <div className="project-card-dropdown">
-                            <button
-                              type="button"
-                              className="dropdown-item delete-item"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteProject(storedProject.id, storedProject.project.name);
-                              }}
-                            >
-                              <Trash2 size={14} />
-                              <span>Eliminar</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="project-card-meta">
-                      <span>
-                        {storedProject.project.device.width} × {storedProject.project.device.height}
-                      </span>
-                      <span>
-                        {storedProject.project.screens.length}{" "}
-                        {storedProject.project.screens.length === 1 ? "pantalla" : "pantallas"}
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
+            {projects.map((storedProject) => (
+              <ProjectCard
+                key={storedProject.id}
+                storedProject={storedProject}
+                isMenuOpen={activeMenuProjectId === storedProject.id}
+                onOpen={openStoredProject}
+                onToggleMenu={toggleMenuProject}
+                onDelete={handleDeleteProject}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -330,3 +272,89 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
     </main>
   );
 }
+
+const ProjectCard = memo(function ProjectCard({
+  storedProject,
+  isMenuOpen,
+  onOpen,
+  onToggleMenu,
+  onDelete,
+}: {
+  storedProject: StoredProject;
+  isMenuOpen: boolean;
+  onOpen: (projectId: string) => void;
+  onToggleMenu: (projectId: string) => void;
+  onDelete: (projectId: string, projectName: string) => void;
+}) {
+  const activeScreen = getActiveScreen(storedProject.project);
+
+  return (
+    <article
+      className="project-card"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(storedProject.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(storedProject.id);
+        }
+      }}
+    >
+      <div className="project-card-preview">
+        <ScreenPreview
+          device={storedProject.project.device}
+          screen={activeScreen}
+          selectedElementId={null}
+          draftElement={null}
+        />
+      </div>
+
+      <div className="project-card-body">
+        <div className="project-card-head">
+          <div className="project-card-title-group">
+            <strong>{storedProject.project.name}</strong>
+            <p className="project-card-subtitle">Activa: {activeScreen.name}</p>
+          </div>
+          <div className="project-card-menu-container">
+            <button
+              type="button"
+              className="project-card-menu-btn"
+              aria-label="Opciones de proyecto"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleMenu(storedProject.id);
+              }}
+            >
+              <MoreVertical size={16} />
+            </button>
+            {isMenuOpen ? (
+              <div className="project-card-dropdown">
+                <button
+                  type="button"
+                  className="dropdown-item delete-item"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDelete(storedProject.id, storedProject.project.name);
+                  }}
+                >
+                  <Trash2 size={14} />
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="project-card-meta">
+          <span>
+            {storedProject.project.device.width} × {storedProject.project.device.height}
+          </span>
+          <span>
+            {storedProject.project.screens.length} {storedProject.project.screens.length === 1 ? "pantalla" : "pantallas"}
+          </span>
+        </div>
+      </div>
+    </article>
+  );
+});
