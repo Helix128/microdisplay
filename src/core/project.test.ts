@@ -8,6 +8,7 @@ import {
   setActiveScreen,
   updateElementInScreen,
 } from "./project";
+import { parseProjectJson } from "./projectFile";
 
 describe("createProject", () => {
   it("creates a default project", () => {
@@ -270,5 +271,60 @@ describe("project helpers", () => {
       filled: true,
     });
     expect(nextProject.screens[1]?.elements).toEqual(project.screens[1]?.elements);
+  });
+});
+
+describe("parseProjectJson", () => {
+  it("loads a valid project", () => {
+    const project = addElementToScreen(createProject({ name: "Demo" }), "screen-1", {
+      id: "line-1",
+      type: "line",
+      x1: 0,
+      y1: 0,
+      x2: 127,
+      y2: 63,
+    });
+
+    const result = parseProjectJson(JSON.stringify(project));
+
+    expect(result).toEqual({ ok: true, project });
+  });
+
+  it("rejects invalid JSON", () => {
+    const result = parseProjectJson("{");
+
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects invalid project shape", () => {
+    const result = parseProjectJson(
+      JSON.stringify({
+        schemaVersion: 1,
+        name: "Broken",
+        device: { width: 128, height: 64 },
+        screens: [],
+        activeScreenId: "screen-1",
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects invalid elements", () => {
+    const project = createProject();
+
+    const result = parseProjectJson(
+      JSON.stringify({
+        ...project,
+        screens: [
+          {
+            ...project.screens[0],
+            elements: [{ id: "text-1", type: "text", text: "Hello" }],
+          },
+        ],
+      }),
+    );
+
+    expect(result.ok).toBe(false);
   });
 });

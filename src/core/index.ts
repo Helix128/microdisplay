@@ -9,3 +9,5 @@ export {
   updateElementInScreen,
 } from "./project";
 export type { CreateProjectOptions, DeviceConfig, Project } from "./project";
+export { parseProject, parseProjectJson } from "./projectFile";
+export type { ProjectParseResult } from "./projectFile";
