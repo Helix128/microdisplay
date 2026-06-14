@@ -91,3 +91,23 @@ export function removeElementFromScreen(
     ),
   };
 }
+
+export function updateElementInScreen(
+  project: Project,
+  screenId: string,
+  element: DesignElement,
+): Project {
+  return {
+    ...project,
+    screens: project.screens.map((screen) =>
+      screen.id === screenId
+        ? {
+            ...screen,
+            elements: screen.elements.map((currentElement) =>
+              currentElement.id === element.id ? element : currentElement,
+            ),
+          }
+        : screen,
+    ),
+  };
+}

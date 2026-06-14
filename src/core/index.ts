@@ -6,5 +6,6 @@ export {
   getActiveScreen,
   removeElementFromScreen,
   setActiveScreen,
+  updateElementInScreen,
 } from "./project";
 export type { CreateProjectOptions, DeviceConfig, Project } from "./project";

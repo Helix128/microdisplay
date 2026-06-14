@@ -6,6 +6,7 @@ import {
   getActiveScreen,
   removeElementFromScreen,
   setActiveScreen,
+  updateElementInScreen,
 } from "./project";
 
 describe("createProject", () => {
@@ -209,6 +210,65 @@ describe("project helpers", () => {
         y2: 10,
       },
     ]);
+    expect(nextProject.screens[1]?.elements).toEqual(project.screens[1]?.elements);
+  });
+
+  it("updates an element in a specific screen without mutating the original project", () => {
+    const project = addScreen(
+      addElementToScreen(createProject(), "screen-1", {
+        id: "rect-1",
+        type: "rect",
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+        filled: false,
+      }),
+      {
+        id: "screen-2",
+        name: "Settings",
+        elements: [
+          {
+            id: "rect-1",
+            type: "rect",
+            x: 1,
+            y: 1,
+            width: 5,
+            height: 5,
+            filled: true,
+          },
+        ],
+      },
+    );
+
+    const nextProject = updateElementInScreen(project, "screen-1", {
+      id: "rect-1",
+      type: "rect",
+      x: 4,
+      y: 5,
+      width: 20,
+      height: 30,
+      filled: true,
+    });
+
+    expect(project.screens[0]?.elements[0]).toEqual({
+      id: "rect-1",
+      type: "rect",
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+      filled: false,
+    });
+    expect(nextProject.screens[0]?.elements[0]).toEqual({
+      id: "rect-1",
+      type: "rect",
+      x: 4,
+      y: 5,
+      width: 20,
+      height: 30,
+      filled: true,
+    });
     expect(nextProject.screens[1]?.elements).toEqual(project.screens[1]?.elements);
   });
 });

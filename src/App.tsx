@@ -4,10 +4,13 @@ import {
   createProject,
   getActiveScreen,
   removeElementFromScreen,
+  type DesignElement,
   type LineElement,
   type RectElement,
+  updateElementInScreen,
 } from "./core";
 import { u8g2 } from "./exporters";
+import { ScreenPreview } from "./preview/ScreenPreview";
 import { createId } from "./utils/id";
 import "./App.css";
 
@@ -33,6 +36,7 @@ function App() {
     createProject({ screenId: createId("screen") }),
   );
   const [elementKind, setElementKind] = useState<ElementKind>("rect");
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [rectForm, setRectForm] = useState<RectForm>({
     x: 0,
     y: 0,
@@ -48,6 +52,8 @@ function App() {
   });
 
   const activeScreen = getActiveScreen(project);
+  const selectedElement =
+    activeScreen.elements.find((element) => element.id === selectedElementId) ?? null;
   const screenCode = u8g2.generateScreen(activeScreen);
 
   function addElement(event: FormEvent<HTMLFormElement>) {
@@ -63,6 +69,7 @@ function App() {
       setProject((currentProject) =>
         addElementToScreen(currentProject, currentProject.activeScreenId, rect),
       );
+      setSelectedElementId(rect.id);
       return;
     }
 
@@ -75,6 +82,7 @@ function App() {
     setProject((currentProject) =>
       addElementToScreen(currentProject, currentProject.activeScreenId, line),
     );
+    setSelectedElementId(line.id);
   }
 
   function removeElement(elementId: string) {
@@ -85,14 +93,22 @@ function App() {
         elementId,
       ),
     );
+
+    if (selectedElementId === elementId) {
+      setSelectedElementId(null);
+    }
+  }
+
+  function updateSelectedElement(element: DesignElement) {
+    setProject((currentProject) =>
+      updateElementInScreen(currentProject, currentProject.activeScreenId, element),
+    );
   }
 
   return (
     <main className="app-shell">
       <header className="app-header">
-        <div>
-          <h1>microdisplay demo</h1>
-        </div>
+        <h1>microdisplay</h1>
       </header>
 
       <section className="workspace-grid">
@@ -245,6 +261,140 @@ function App() {
           </form>
         </article>
 
+        <article className="panel edit-panel">
+          <h2>Editar figura</h2>
+          {selectedElement === null ? (
+            <p className="empty-state">Selecciona una figura.</p>
+          ) : selectedElement.type === "rect" ? (
+            <div className="editor-form">
+              <div className="field-grid">
+                <label>
+                  X
+                  <input
+                    type="number"
+                    value={selectedElement.x}
+                    onChange={(event) =>
+                      updateSelectedElement({
+                        ...selectedElement,
+                        x: event.currentTarget.valueAsNumber,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Y
+                  <input
+                    type="number"
+                    value={selectedElement.y}
+                    onChange={(event) =>
+                      updateSelectedElement({
+                        ...selectedElement,
+                        y: event.currentTarget.valueAsNumber,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Width
+                  <input
+                    type="number"
+                    value={selectedElement.width}
+                    onChange={(event) =>
+                      updateSelectedElement({
+                        ...selectedElement,
+                        width: event.currentTarget.valueAsNumber,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Height
+                  <input
+                    type="number"
+                    value={selectedElement.height}
+                    onChange={(event) =>
+                      updateSelectedElement({
+                        ...selectedElement,
+                        height: event.currentTarget.valueAsNumber,
+                      })
+                    }
+                  />
+                </label>
+              </div>
+              <label className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={selectedElement.filled}
+                  onChange={(event) =>
+                    updateSelectedElement({
+                      ...selectedElement,
+                      filled: event.currentTarget.checked,
+                    })
+                  }
+                />
+                Relleno
+              </label>
+            </div>
+          ) : (
+            <div className="editor-form">
+              <div className="field-grid">
+                <label>
+                  X1
+                  <input
+                    type="number"
+                    value={selectedElement.x1}
+                    onChange={(event) =>
+                      updateSelectedElement({
+                        ...selectedElement,
+                        x1: event.currentTarget.valueAsNumber,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Y1
+                  <input
+                    type="number"
+                    value={selectedElement.y1}
+                    onChange={(event) =>
+                      updateSelectedElement({
+                        ...selectedElement,
+                        y1: event.currentTarget.valueAsNumber,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  X2
+                  <input
+                    type="number"
+                    value={selectedElement.x2}
+                    onChange={(event) =>
+                      updateSelectedElement({
+                        ...selectedElement,
+                        x2: event.currentTarget.valueAsNumber,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Y2
+                  <input
+                    type="number"
+                    value={selectedElement.y2}
+                    onChange={(event) =>
+                      updateSelectedElement({
+                        ...selectedElement,
+                        y2: event.currentTarget.valueAsNumber,
+                      })
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+          )}
+        </article>
+
         <article className="panel">
           <h2>Proyecto</h2>
           <dl>
@@ -276,7 +426,11 @@ function App() {
           ) : (
             <ul className="element-list">
               {activeScreen.elements.map((element) => (
-                <li key={element.id}>
+                <li
+                  className={element.id === selectedElementId ? "selected" : ""}
+                  key={element.id}
+                  onClick={() => setSelectedElementId(element.id)}
+                >
                   <div>
                     <code>{element.type}</code>
                     <span>{element.id}</span>
@@ -284,7 +438,10 @@ function App() {
                   <button
                     className="danger-button"
                     type="button"
-                    onClick={() => removeElement(element.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      removeElement(element.id);
+                    }}
                   >
                     Borrar
                   </button>
@@ -296,6 +453,11 @@ function App() {
       </section>
 
       <section className="output-grid">
+        <article className="panel">
+          <h2>Preview</h2>
+          <ScreenPreview device={project.device} screen={activeScreen} />
+        </article>
+
         <article className="panel">
           <h2>Código U8G2</h2>
           <pre>{screenCode || "// Añade figuras para generar código"}</pre>
