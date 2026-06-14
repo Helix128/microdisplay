@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: CI
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
 
 jobs:
   test-frontend:
-    name: Frontend Tests
+    name: Frontend tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +21,7 @@ jobs:
         with:
           version: 9
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -33,11 +33,11 @@ jobs:
       - name: Typecheck
         run: pnpm build
 
-      - name: Run Tests
+      - name: Run tests
         run: pnpm test
 
   test-rust:
-    name: Rust Tests
+    name: Rust tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,13 +50,13 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Rust Cache
+      - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
 
-      - name: Cargo Check
+      - name: Cargo check
         run: cargo check --manifest-path src-tauri/Cargo.toml
 
-      - name: Run Cargo Tests
+      - name: Run cargo tests
         run: cargo test --manifest-path src-tauri/Cargo.toml
