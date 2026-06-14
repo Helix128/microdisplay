@@ -1,5 +1,6 @@
 import type { PointerEvent } from "react";
 import type { DeviceConfig, Screen } from "../core";
+import { rasterizeLine } from "../targets/u8g2";
 import "./ScreenPreview.css";
 
 export type Point = {
@@ -164,15 +165,8 @@ export function ScreenPreview({
           }
           case "line":
             return (
-              <line
+              <g
                 key={element.id}
-                x1={element.x1 + 0.5}
-                y1={element.y1 + 0.5}
-                x2={element.x2 + 0.5}
-                y2={element.y2 + 0.5}
-                stroke={selected ? "#00aaff" : "white"}
-                strokeWidth={1}
-                strokeLinecap="square"
                 onPointerDown={
                   onElementPointerDown === undefined
                     ? undefined
@@ -185,7 +179,18 @@ export function ScreenPreview({
                         onElementPointerDown(element.id, getPoint(event));
                       }
                 }
-              />
+              >
+                {rasterizeLine(element.x1, element.y1, element.x2, element.y2).map((point) => (
+                  <rect
+                    key={`${point.x},${point.y}`}
+                    x={point.x}
+                    y={point.y}
+                    width={1}
+                    height={1}
+                    fill={selected ? "#00aaff" : "white"}
+                  />
+                ))}
+              </g>
             );
         }
       })}
@@ -212,15 +217,11 @@ export function ScreenPreview({
         )
       ) : null}
       {draftElement?.type === "line" ? (
-        <line
-          x1={draftElement.x1 + 0.5}
-          y1={draftElement.y1 + 0.5}
-          x2={draftElement.x2 + 0.5}
-          y2={draftElement.y2 + 0.5}
-          stroke="#777"
-          strokeWidth={1}
-          strokeLinecap="square"
-        />
+        <g>
+          {rasterizeLine(draftElement.x1, draftElement.y1, draftElement.x2, draftElement.y2).map((point) => (
+            <rect key={`${point.x},${point.y}`} x={point.x} y={point.y} width={1} height={1} fill="#777" />
+          ))}
+        </g>
       ) : null}
     </svg>
   );

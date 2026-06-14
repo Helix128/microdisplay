@@ -1,1 +1,1 @@
-export * as u8g2 from "./u8g2";
+export * as u8g2 from "../targets/u8g2";

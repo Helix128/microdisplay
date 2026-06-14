@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Project, Screen } from "../core";
-import { u8g2 } from "./index";
+import type { Project, Screen } from "../../core";
+import { generateProject, generateScreen } from "./index";
 
 const emptyScreen: Screen = {
   id: "screen-1",
@@ -55,25 +55,25 @@ const screenWithLine: Screen = {
   ],
 };
 
-describe("u8g2.generateScreen", () => {
+describe("generateScreen", () => {
   it("returns empty string for empty screen", () => {
-    expect(u8g2.generateScreen(emptyScreen)).toBe("");
+    expect(generateScreen(emptyScreen)).toBe("");
   });
 
   it("generates drawFrame for unfilled rect", () => {
-    expect(u8g2.generateScreen(screenWithRect)).toBe(
+    expect(generateScreen(screenWithRect)).toBe(
       "u8g2.drawFrame(0, 1, 10, 20);",
     );
   });
 
   it("generates drawBox for filled rect", () => {
-    expect(u8g2.generateScreen(screenWithFilledRect)).toBe(
+    expect(generateScreen(screenWithFilledRect)).toBe(
       "u8g2.drawBox(2, 3, 30, 40);",
     );
   });
 
   it("generates drawLine for line", () => {
-    expect(u8g2.generateScreen(screenWithLine)).toBe(
+    expect(generateScreen(screenWithLine)).toBe(
       "u8g2.drawLine(0, 0, 127, 63);",
     );
   });
@@ -103,13 +103,13 @@ describe("u8g2.generateScreen", () => {
       ],
     };
 
-    expect(u8g2.generateScreen(screen)).toBe(
+    expect(generateScreen(screen)).toBe(
       "u8g2.drawFrame(1, 2, 3, 4);\nu8g2.drawLine(5, 6, 7, 8);",
     );
   });
 });
 
-describe("u8g2.generateProject", () => {
+describe("generateProject", () => {
   it("generates a function per screen", () => {
     const project: Project = {
       schemaVersion: 1,
@@ -135,7 +135,7 @@ describe("u8g2.generateProject", () => {
       activeScreenId: "screen-1",
     };
 
-    expect(u8g2.generateProject(project)).toBe(
+    expect(generateProject(project)).toBe(
       "void drawMainScreen() {\n  u8g2.drawFrame(0, 0, 10, 10);\n}",
     );
   });
@@ -179,7 +179,7 @@ describe("u8g2.generateProject", () => {
       activeScreenId: "screen-1",
     };
 
-    expect(u8g2.generateProject(project)).toBe(
+    expect(generateProject(project)).toBe(
       [
         "void drawMainScreen() {",
         "  u8g2.drawFrame(0, 0, 10, 10);",
@@ -205,7 +205,7 @@ describe("u8g2.generateProject", () => {
       activeScreenId: "screen-1",
     };
 
-    expect(u8g2.generateProject(project)).toBe(
+    expect(generateProject(project)).toBe(
       [
         "void drawMainScreen() {",
         "}",
@@ -231,7 +231,7 @@ describe("u8g2.generateProject", () => {
       activeScreenId: "screen-1",
     };
 
-    expect(u8g2.generateProject(project)).toBe(
+    expect(generateProject(project)).toBe(
       [
         "void drawMain() {",
         "}",

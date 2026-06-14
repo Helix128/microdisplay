@@ -1,4 +1,4 @@
-import type { DesignElement, Project, Screen } from "../core";
+import type { DesignElement, Project, Screen } from "../../core";
 
 export function generateScreen(screen: Screen): string {
   return screen.elements.map(generateElement).join("\n");
