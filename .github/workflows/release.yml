@@ -29,7 +29,8 @@ jobs:
         id: get_version
         shell: bash
         run: |
-          echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -85,8 +86,7 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}".TrimStart("v")
-          $filename = "microdisplay_${version}_x64-portable.exe"
+          $filename = "microdisplay_${{ steps.get_version.outputs.version }}_x64-portable.exe"
           Copy-Item src-tauri/target/release/microdisplay.exe src-tauri/target/release/$filename
           gh release upload ${{ github.ref_name }} src-tauri/target/release/$filename --clobber
         env:
