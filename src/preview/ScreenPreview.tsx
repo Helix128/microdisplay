@@ -32,6 +32,7 @@ type ScreenPreviewProps = {
   selectedElementId: string | null;
   draftElement: DraftElement | null;
   dragPreviewElement?: DesignElement | null;
+  showPixelGrid?: boolean;
   onPointerDown?: (point: Point) => void;
   onPointerMove?: (point: Point) => void;
   onPointerUp?: (point: Point) => void;
@@ -44,6 +45,7 @@ export const ScreenPreview = memo(function ScreenPreview({
   selectedElementId,
   draftElement,
   dragPreviewElement,
+  showPixelGrid = false,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -67,6 +69,23 @@ export const ScreenPreview = memo(function ScreenPreview({
     [device.height, device.width],
   );
 
+  const pixelGrid = useMemo(() => {
+    if (!showPixelGrid) {
+      return null;
+    }
+
+    return (
+      <g className="screen-preview-grid" pointerEvents="none">
+        {Array.from({ length: device.width + 1 }, (_, x) => (
+          <line key={`grid-v-${x}`} x1={x} y1={0} x2={x} y2={device.height} />
+        ))}
+        {Array.from({ length: device.height + 1 }, (_, y) => (
+          <line key={`grid-h-${y}`} x1={0} y1={y} x2={device.width} y2={y} />
+        ))}
+      </g>
+    );
+  }, [device.height, device.width, showPixelGrid]);
+
   return (
     <svg
       className="screen-preview"
@@ -86,6 +105,7 @@ export const ScreenPreview = memo(function ScreenPreview({
       onPointerUp={onPointerUp === undefined ? undefined : (event) => onPointerUp(getPoint(event))}
     >
       <rect width={device.width} height={device.height} fill="black" />
+      {pixelGrid}
       {screen.elements.map((element) => {
         const renderElement = dragPreviewElement?.id === element.id ? dragPreviewElement : element;
         const selected = renderElement.id === selectedElementId;

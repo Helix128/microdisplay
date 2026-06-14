@@ -8,3 +8,12 @@
   touch-action: none;
   user-select: none;
 }
+
+.screen-preview-grid {
+  stroke: rgba(255, 255, 255, 0.12);
+  opacity: 0.9;
+}
+
+.screen-preview-grid line {
+  vector-effect: non-scaling-stroke;
+}

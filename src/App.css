@@ -474,6 +474,18 @@ input[type="checkbox"] {
   background: #2b2b2b;
 }
 
+.toolbar-group button.active {
+  border-color: #6b6b6b;
+  color: #ffffff;
+  background: #2f2f2f;
+}
+
+.toolbar-group button.active:hover,
+.toolbar-group button.active:focus-visible {
+  border-color: #8a8a8a;
+  background: #383838;
+}
+
 .toolbar-group button svg {
   width: 1rem;
   height: 1rem;

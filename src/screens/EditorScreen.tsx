@@ -7,6 +7,7 @@ import {
   Move,
   Slash,
   RectangleHorizontal,
+  Grid2x2,
 } from "lucide-react";
 import {
   type PointerEvent,
@@ -69,6 +70,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const [panOrigin, setPanOrigin] = useState<Point | null>(null);
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
+  const [showPixelGrid, setShowPixelGrid] = useState(true);
   const [dragPreviewElement, setDragPreviewElement] = useState<DesignElement | null>(null);
   const artboardRef = useRef<HTMLDivElement>(null);
   const dragOriginalElementRef = useRef<DesignElement | null>(null);
@@ -439,6 +441,16 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
           >
             <Slash />
           </button>
+          <button
+            className={showPixelGrid ? "active" : ""}
+            type="button"
+            aria-label="Grilla de pixeles"
+            aria-pressed={showPixelGrid}
+            data-tooltip="Grilla"
+            onClick={() => setShowPixelGrid((value) => !value)}
+          >
+            <Grid2x2 />
+          </button>
         </div>
         <div className="toolbar-group toolbar-group-system">
           <button type="button" aria-label="Salir" data-tooltip="Salir" onClick={onExit}>
@@ -497,6 +509,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
             selectedElementId={selectedElementId}
             draftElement={draftElement}
             dragPreviewElement={dragPreviewElement}
+            showPixelGrid={showPixelGrid}
             onPointerDown={handlePreviewPointerDown}
             onPointerMove={handlePreviewPointerMove}
             onPointerUp={handlePreviewPointerUp}
