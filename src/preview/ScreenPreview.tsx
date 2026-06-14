@@ -32,7 +32,7 @@ type ScreenPreviewProps = {
   onPointerDown?: (point: Point) => void;
   onPointerMove?: (point: Point) => void;
   onPointerUp?: (point: Point) => void;
-  onElementPointerDown?: (elementId: string) => void;
+  onElementPointerDown?: (elementId: string, point: Point) => void;
 };
 
 export function ScreenPreview({
@@ -45,8 +45,12 @@ export function ScreenPreview({
   onPointerUp,
   onElementPointerDown,
 }: ScreenPreviewProps) {
-  function getPoint(event: PointerEvent<SVGSVGElement>): Point {
-    const rect = event.currentTarget.getBoundingClientRect();
+  function getPoint(event: PointerEvent<any>): Point {
+    const svg = event.currentTarget.closest("svg");
+    if (!svg) {
+      return { x: 0, y: 0 };
+    }
+    const rect = svg.getBoundingClientRect();
     const rawX = Math.floor(((event.clientX - rect.left) * device.width) / rect.width);
     const rawY = Math.floor(((event.clientY - rect.top) * device.height) / rect.height);
 
@@ -60,6 +64,7 @@ export function ScreenPreview({
     <svg
       className="screen-preview"
       viewBox={`0 0 ${device.width} ${device.height}`}
+      shapeRendering="crispEdges"
       role="img"
       aria-label={`Vista previa de ${screen.name}`}
       onPointerDown={
@@ -78,72 +83,143 @@ export function ScreenPreview({
         const selected = element.id === selectedElementId;
 
         switch (element.type) {
-          case "rect":
+          case "rect": {
+            const isOnePixelThin = element.width === 1 || element.height === 1;
+
+            if (isOnePixelThin) {
+              return (
+                <rect
+                  key={element.id}
+                  x={element.x}
+                  y={element.y}
+                  width={element.width}
+                  height={element.height}
+                  fill={selected ? "#00aaff" : "white"}
+                  stroke="none"
+                  onPointerDown={
+                    onElementPointerDown === undefined
+                      ? undefined
+                      : (event) => {
+                          event.stopPropagation();
+                          const svg = event.currentTarget.closest("svg");
+                          if (svg) {
+                            svg.setPointerCapture(event.pointerId);
+                          }
+                          onElementPointerDown(element.id, getPoint(event));
+                        }
+                  }
+                />
+              );
+            }
+
             return (
-              <rect
-                key={element.id}
-                x={element.x}
-                y={element.y}
-                width={element.width}
-                height={element.height}
-                fill={element.filled ? "white" : "none"}
-                stroke={selected ? "#999" : element.filled ? "none" : "white"}
-                strokeDasharray={selected ? "2 1" : undefined}
-                strokeWidth={1}
-                onPointerDown={
-                  onElementPointerDown === undefined
-                    ? undefined
-                    : (event) => {
-                        event.stopPropagation();
-                        onElementPointerDown(element.id);
-                      }
-                }
-              />
+              <g key={element.id}>
+                {element.filled && (
+                  <rect
+                    x={element.x}
+                    y={element.y}
+                    width={element.width}
+                    height={element.height}
+                    fill="white"
+                    stroke="none"
+                    onPointerDown={
+                      onElementPointerDown === undefined
+                        ? undefined
+                        : (event) => {
+                            event.stopPropagation();
+                            const svg = event.currentTarget.closest("svg");
+                            if (svg) {
+                              svg.setPointerCapture(event.pointerId);
+                            }
+                            onElementPointerDown(element.id, getPoint(event));
+                          }
+                    }
+                  />
+                )}
+                {(!element.filled || selected) && (
+                  <rect
+                    x={element.x + 0.5}
+                    y={element.y + 0.5}
+                    width={element.width - 1}
+                    height={element.height - 1}
+                    fill="none"
+                    stroke={selected ? "#00aaff" : "white"}
+                    strokeWidth={1}
+                    onPointerDown={
+                      onElementPointerDown === undefined
+                        ? undefined
+                        : (event) => {
+                            event.stopPropagation();
+                            const svg = event.currentTarget.closest("svg");
+                            if (svg) {
+                              svg.setPointerCapture(event.pointerId);
+                            }
+                            onElementPointerDown(element.id, getPoint(event));
+                          }
+                    }
+                  />
+                )}
+              </g>
             );
+          }
           case "line":
             return (
               <line
                 key={element.id}
-                x1={element.x1}
-                y1={element.y1}
-                x2={element.x2}
-                y2={element.y2}
-                stroke={selected ? "#999" : "white"}
-                strokeDasharray={selected ? "2 1" : undefined}
+                x1={element.x1 + 0.5}
+                y1={element.y1 + 0.5}
+                x2={element.x2 + 0.5}
+                y2={element.y2 + 0.5}
+                stroke={selected ? "#00aaff" : "white"}
                 strokeWidth={1}
+                strokeLinecap="square"
                 onPointerDown={
                   onElementPointerDown === undefined
                     ? undefined
                     : (event) => {
                         event.stopPropagation();
-                        onElementPointerDown(element.id);
+                        const svg = event.currentTarget.closest("svg");
+                        if (svg) {
+                          svg.setPointerCapture(event.pointerId);
+                        }
+                        onElementPointerDown(element.id, getPoint(event));
                       }
                 }
               />
             );
         }
       })}
-      {draftElement?.type === "rect" ? (
-        <rect
-          x={draftElement.x}
-          y={draftElement.y}
-          width={draftElement.width}
-          height={draftElement.height}
-          fill="none"
-          stroke="#777"
-          strokeDasharray="2 1"
-          strokeWidth={1}
-        />
+      {draftElement?.type === "rect" && draftElement.width > 0 && draftElement.height > 0 ? (
+        draftElement.width === 1 || draftElement.height === 1 ? (
+          <rect
+            x={draftElement.x}
+            y={draftElement.y}
+            width={draftElement.width}
+            height={draftElement.height}
+            fill="#777"
+            stroke="none"
+          />
+        ) : (
+          <rect
+            x={draftElement.x + 0.5}
+            y={draftElement.y + 0.5}
+            width={draftElement.width - 1}
+            height={draftElement.height - 1}
+            fill="none"
+            stroke="#777"
+            strokeWidth={1}
+          />
+        )
       ) : null}
       {draftElement?.type === "line" ? (
         <line
-          x1={draftElement.x1}
-          y1={draftElement.y1}
-          x2={draftElement.x2}
-          y2={draftElement.y2}
+          x1={draftElement.x1 + 0.5}
+          y1={draftElement.y1 + 0.5}
+          x2={draftElement.x2 + 0.5}
+          y2={draftElement.y2 + 0.5}
           stroke="#777"
-          strokeDasharray="2 1"
           strokeWidth={1}
+          strokeLinecap="square"
         />
       ) : null}
     </svg>

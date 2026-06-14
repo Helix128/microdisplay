@@ -61,6 +61,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const [panOrigin, setPanOrigin] = useState<Point | null>(null);
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
+  const [draggedElement, setDraggedElement] = useState<DesignElement | null>(null);
   const artboardRef = useRef<HTMLDivElement>(null);
 
   const activeScreen = getActiveScreen(project);
@@ -82,12 +83,42 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   }
 
   function handlePreviewPointerMove(point: Point) {
+    if (tool === "select" && draggedElement !== null && dragStart !== null) {
+      const dx = point.x - dragStart.x;
+      const dy = point.y - dragStart.y;
+
+      if (draggedElement.type === "rect") {
+        const updated: RectElement = {
+          ...draggedElement,
+          x: draggedElement.x + dx,
+          y: draggedElement.y + dy,
+        };
+        updateSelectedElement(updated);
+      } else if (draggedElement.type === "line") {
+        const updated: LineElement = {
+          ...draggedElement,
+          x1: draggedElement.x1 + dx,
+          y1: draggedElement.y1 + dy,
+          x2: draggedElement.x2 + dx,
+          y2: draggedElement.y2 + dy,
+        };
+        updateSelectedElement(updated);
+      }
+      return;
+    }
+
     if (dragStart !== null) {
       setDragCurrent(point);
     }
   }
 
   function handlePreviewPointerUp(point: Point) {
+    if (draggedElement !== null) {
+      setDraggedElement(null);
+      setDragStart(null);
+      return;
+    }
+
     if (dragStart === null) {
       return;
     }
@@ -126,9 +157,14 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
     setDragCurrent(null);
   }
 
-  function handleElementPointerDown(elementId: string) {
+  function handleElementPointerDown(elementId: string, point: Point) {
     if (tool === "select") {
       setSelectedElementId(elementId);
+      const element = activeScreen.elements.find((el) => el.id === elementId);
+      if (element) {
+        setDraggedElement(element);
+        setDragStart(point);
+      }
     }
   }
 
@@ -539,8 +575,8 @@ function createRectFromPoints(start: Point, end: Point) {
   return {
     x: Math.min(start.x, end.x),
     y: Math.min(start.y, end.y),
-    width: Math.abs(end.x - start.x),
-    height: Math.abs(end.y - start.y),
+    width: Math.abs(end.x - start.x) + 1,
+    height: Math.abs(end.y - start.y) + 1,
   };
 }
 
