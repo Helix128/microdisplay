@@ -17,10 +17,11 @@ export type CreateProjectOptions = {
   name?: string;
   width?: number;
   height?: number;
+  screenId?: string;
 };
 
 export function createProject(options: CreateProjectOptions = {}): Project {
-  const screenId = "screen-1";
+  const screenId = options.screenId ?? "screen-1";
 
   return {
     schemaVersion: 1,

@@ -40,4 +40,11 @@ describe("createProject", () => {
     });
     expect(project.activeScreenId).toBe("screen-1");
   });
+
+  it("uses a provided screen id", () => {
+    const project = createProject({ screenId: "screen-abc" });
+
+    expect(project.screens[0]?.id).toBe("screen-abc");
+    expect(project.activeScreenId).toBe("screen-abc");
+  });
 });
