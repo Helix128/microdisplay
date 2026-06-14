@@ -135,7 +135,7 @@ export const ScreenPreview = memo(function ScreenPreview({
         }
       })}
       {draftElement?.type === "rect" && draftElement.width > 0 && draftElement.height > 0 ? (
-        draftElement.width === 1 || draftElement.height === 1 ? (
+        draftElement.filled || draftElement.width === 1 || draftElement.height === 1 ? (
           <rect
             x={draftElement.x}
             y={draftElement.y}

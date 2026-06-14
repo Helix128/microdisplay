@@ -5,6 +5,7 @@ import {
   LogOut,
   MousePointer2,
   Move,
+  PaintBucket,
   Slash,
   RectangleHorizontal,
   Grid2x2,
@@ -71,6 +72,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
   const [showPixelGrid, setShowPixelGrid] = useState(true);
+  const [rectFilled, setRectFilled] = useState(false);
   const [dragPreviewElement, setDragPreviewElement] = useState<DesignElement | null>(null);
   const artboardRef = useRef<HTMLDivElement>(null);
   const dragOriginalElementRef = useRef<DesignElement | null>(null);
@@ -87,7 +89,10 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
     () => activeScreen.elements.find((element) => element.id === selectedElementId) ?? null,
     [activeScreen, selectedElementId],
   );
-  const draftElement = useMemo(() => getDraftElement(tool, dragStart, dragCurrent), [tool, dragStart, dragCurrent]);
+  const draftElement = useMemo(
+    () => getDraftElement(tool, dragStart, dragCurrent, rectFilled),
+    [tool, dragStart, dragCurrent, rectFilled],
+  );
   const exportCode = useMemo(
     () => (showExportPanel ? u8g2.generateProject(project) : ""),
     [project, showExportPanel],
@@ -168,7 +173,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
           const element: RectElement = {
             id: createId("rect"),
             type: "rect",
-            filled: false,
+            filled: rectFilled,
             ...rect,
           };
 
@@ -194,7 +199,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
       setDragStart(null);
       setDragCurrent(null);
     },
-    [dragPreviewElement, dragStart, onProjectChange, project, tool],
+    [dragPreviewElement, dragStart, onProjectChange, project, rectFilled, tool],
   );
 
   const handleElementPointerDown = useCallback(
@@ -488,6 +493,22 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         </div>
       </div>
 
+      {tool === "rect" ? (
+        <div className="tool-options-panel" aria-label="Opciones de rectángulo">
+          <h2>Opciones</h2>
+          <button
+            className={rectFilled ? "active" : ""}
+            type="button"
+            aria-label="Rectángulos rellenos"
+            aria-pressed={rectFilled}
+            data-tooltip="Relleno"
+            onClick={() => setRectFilled((value) => !value)}
+          >
+            <PaintBucket />
+          </button>
+        </div>
+      ) : null}
+
       <div
         className={`editor-viewport ${tool === "pan" || panStart !== null ? "is-panning" : ""}`}
         onPointerDownCapture={startPan}
@@ -513,7 +534,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
             onPointerDown={handlePreviewPointerDown}
             onPointerMove={handlePreviewPointerMove}
             onPointerUp={handlePreviewPointerUp}
-            onElementPointerDown={handleElementPointerDown}
+            onElementPointerDown={tool === "select" ? handleElementPointerDown : undefined}
           />
         </div>
       </div>
@@ -645,6 +666,7 @@ function getDraftElement(
   tool: Tool,
   start: Point | null,
   current: Point | null,
+  rectFilled: boolean,
 ): DraftElement | null {
   if (start === null || current === null) {
     return null;
@@ -653,7 +675,7 @@ function getDraftElement(
   if (tool === "rect") {
     return {
       type: "rect",
-      filled: false,
+      filled: rectFilled,
       ...createRectFromPoints(start, current),
     };
   }

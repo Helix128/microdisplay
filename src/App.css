@@ -426,7 +426,7 @@ input[type="checkbox"] {
   top: 1rem;
   left: 1rem;
   right: 1rem;
-  z-index: 10;
+  z-index: 1000;
   display: flex;
   justify-content: space-between;
   gap: 0.75rem;
@@ -502,13 +502,14 @@ input[type="checkbox"] {
   padding: 0.45rem;
 }
 
-.toolbar-group button[data-tooltip]::after {
+.toolbar-group button[data-tooltip]::after,
+.tool-options-panel button[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
   top: calc(100% + 0.4rem);
   left: 50%;
   transform: translateX(-50%) translateY(-0.15rem);
-  z-index: 20;
+  z-index: 10001;
   pointer-events: none;
   opacity: 0;
   white-space: nowrap;
@@ -525,9 +526,19 @@ input[type="checkbox"] {
   transition-delay: 0ms;
 }
 
+
+.editor-toolbar:has(button[data-tooltip]:hover),
+.editor-toolbar:has(button[data-tooltip]:focus-visible),
+.tool-options-panel:has(button[data-tooltip]:hover),
+.tool-options-panel:has(button[data-tooltip]:focus-visible) {
+  z-index: 10000;
+}
+
 @media (hover: hover) {
   .toolbar-group button[data-tooltip]:hover::after,
-  .toolbar-group button[data-tooltip]:focus-visible::after {
+  .toolbar-group button[data-tooltip]:focus-visible::after,
+  .tool-options-panel button[data-tooltip]:hover::after,
+  .tool-options-panel button[data-tooltip]:focus-visible::after {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
     transition-delay: 180ms;
@@ -535,9 +546,63 @@ input[type="checkbox"] {
 }
 
 @media (hover: none) {
-  .toolbar-group button[data-tooltip]::after {
+  .toolbar-group button[data-tooltip]::after,
+  .tool-options-panel button[data-tooltip]::after {
     display: none;
   }
+}
+
+.tool-options-panel {
+  position: absolute;
+  top: 4.75rem;
+  left: 1rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 1rem;
+  background: #1a1a1a;
+}
+
+.tool-options-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tool-options-panel button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0.45rem;
+  overflow: visible;
+}
+
+.tool-options-panel button.active {
+  border-color: #6b6b6b;
+  color: #ffffff;
+  background: #2f2f2f;
+}
+
+.tool-options-panel button.active:hover,
+.tool-options-panel button.active:focus-visible {
+  border-color: #8a8a8a;
+  background: #383838;
+}
+
+.tool-options-panel button svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .editor-viewport {
@@ -573,9 +638,12 @@ input[type="checkbox"] {
 }
 
 .floating-inspector h2,
-.export-panel h2 {
+.export-panel h2,
+.tool-options-panel h2 {
   margin: 0 0 1rem;
   font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .export-panel {
