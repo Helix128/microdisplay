@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "µdisplay",
+        "title": "µDisplay Studio",
         "width": 1280,
         "height": 720
       }

@@ -147,7 +147,7 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
     <main className="start-shell">
       <aside className="start-sidebar">
         <div className="start-brand">
-          <h1>µdisplay</h1>
+          <h1>µDisplay Studio</h1>
         </div>
 
         <section className="start-create-panel">
