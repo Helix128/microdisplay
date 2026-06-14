@@ -19,10 +19,10 @@ export const tauriProjectStorage: ProjectStorage = {
   async openProject() {
     const projectFolderPath = await ensureDefaultProjectFolder();
     const path = await open({
-      title: "Abrir proyecto microdisplay",
+      title: "Abrir proyecto",
       defaultPath: projectFolderPath,
       multiple: false,
-      filters: [{ name: "Proyecto microdisplay", extensions: ["json"] }],
+      filters: [{ name: "Proyecto", extensions: ["json"] }],
       fileAccessMode: "scoped",
     });
 
@@ -125,9 +125,9 @@ async function saveProjectToCurrentPath(project: Project) {
 
 async function saveProjectWithDialog(project: Project) {
   const path = await save({
-    title: "Guardar proyecto microdisplay",
+    title: "Guardar proyecto",
     defaultPath: await getDefaultProjectPath(project),
-    filters: [{ name: "Proyecto microdisplay", extensions: ["json"] }],
+    filters: [{ name: "Proyecto", extensions: ["json"] }],
   });
 
   if (path === null) {
