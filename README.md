@@ -1,3 +1,3 @@
 # µdisplay (a.k.a microdisplay)
 
-**Diseña interfaces para pantallas embebidas y exporta código limpio para microcontroladores.**
+Diseñador de interfaces para pantallas embebidas con exportación de código para microcontroladores. 
