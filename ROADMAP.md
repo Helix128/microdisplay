@@ -1,10 +1,11 @@
 # Roadmap
 
+OJO: este roadmap es para ordenarme las ideas y NO NECESARIAMENTE COINCIDIRÁ AL PIE DE LA LETRA CON LAS FEATURES EN CADA VERSIÓN
+
 ## v0.1 — Bases del proyecto
 - modelos de datos
-- esquemas en Zod
 - proyecto default
-- framebuffer monocromo
+- canvas real de diseño
 - definir figuras básicas: rect, line, circle
 - vista previa en Canvas HTML
 - proyecto de ejemplo .microdisplay.json para pruebas
