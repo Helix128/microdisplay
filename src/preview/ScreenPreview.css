@@ -1,15 +1,9 @@
-.screen-preview-frame {
-  width: 100%;
-  overflow: auto;
-  border: 1px solid #333;
-  border-radius: 4px;
-  padding: 1rem;
-  background: #0b0b0b;
-}
-
 .screen-preview {
   display: block;
   width: 100%;
+  border: 1px solid #333;
   image-rendering: pixelated;
   background: #000;
+  touch-action: none;
+  user-select: none;
 }

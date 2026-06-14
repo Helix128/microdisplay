@@ -16,6 +16,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow: hidden;
   background: #111;
 }
 
@@ -35,9 +36,10 @@ button {
   cursor: pointer;
 }
 
-button:hover {
-  border-color: #777;
-  background: #2b2b2b;
+button:hover,
+button.active {
+  border-color: #888;
+  background: #333;
 }
 
 input,
@@ -60,54 +62,191 @@ input[type="checkbox"] {
   width: auto;
 }
 
-.app-shell {
-  width: min(1180px, 100%);
-  margin: 0 auto;
-  padding: 1.5rem;
-}
-
-.app-header {
-  margin-bottom: 1rem;
-}
-
-.app-header h1 {
-  margin: 0;
-  font-size: 1.8rem;
-}
-
-.app-header p {
-  margin: 0.25rem 0 0;
-  color: #aaa;
-}
-
-.workspace-grid,
-.output-grid {
+.start-shell {
   display: grid;
-  gap: 1rem;
+  min-height: 100vh;
+  place-items: center;
+  padding: 1rem;
 }
 
-.workspace-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.output-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.workspace-grid {
-  margin-bottom: 1rem;
-}
-
-.panel {
+.start-panel {
+  width: min(420px, 100%);
   border: 1px solid #333;
   border-radius: 6px;
   padding: 1rem;
   background: #1a1a1a;
 }
 
-.panel h2 {
+.start-panel h1 {
+  margin: 0 0 1rem;
+  font-size: 1.8rem;
+}
+
+.editor-shell {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #151515;
+}
+
+.editor-toolbar {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 0.5rem;
+  background: #1a1a1a;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.toolbar-group-system {
+  margin-left: auto;
+  padding-left: 0.75rem;
+  border-left: 1px solid #333;
+}
+
+.toolbar-group button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.toolbar-group button svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.toolbar-group:not(.toolbar-group-system) button {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0.45rem;
+}
+
+.toolbar-group button[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 50%;
+  transform: translateX(-50%) translateY(-0.15rem);
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  white-space: nowrap;
+  border: 1px solid #3d3d3d;
+  border-radius: 4px;
+  padding: 0.28rem 0.5rem;
+  color: #f0f0f0;
+  background: #101010;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: opacity 120ms ease, transform 120ms ease;
+  transition-delay: 0ms;
+}
+
+@media (hover: hover) {
+  .toolbar-group button[data-tooltip]:hover::after,
+  .toolbar-group button[data-tooltip]:focus-visible::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    transition-delay: 180ms;
+  }
+}
+
+@media (hover: none) {
+  .toolbar-group button[data-tooltip]::after {
+    display: none;
+  }
+}
+
+.editor-viewport {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.editor-viewport.is-panning {
+  cursor: grab;
+}
+
+.editor-artboard {
+  position: absolute;
+  top: calc(50% - 160px);
+  left: calc(50% - 320px);
+  width: 640px;
+  transition: none;
+  transform-origin: top left;
+}
+
+.floating-inspector {
+  position: absolute;
+  top: 4.75rem;
+  right: 1rem;
+  z-index: 10;
+  width: 280px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 1rem;
+  background: #1a1a1a;
+}
+
+.floating-inspector h2,
+.export-panel h2 {
   margin: 0 0 1rem;
   font-size: 1rem;
+}
+
+.export-panel {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 10;
+  width: min(620px, calc(100vw - 2rem));
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 1rem;
+  background: #1a1a1a;
+}
+
+.export-panel textarea {
+  width: 100%;
+  min-height: 18rem;
+  resize: vertical;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.75rem;
+  color: #eee;
+  background: #0b0b0b;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.export-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
 }
 
 .editor-form {
@@ -115,7 +254,8 @@ input[type="checkbox"] {
   gap: 1rem;
 }
 
-.editor-form label {
+.editor-form label,
+.floating-inspector label {
   display: grid;
   gap: 0.35rem;
   color: #ccc;
@@ -146,7 +286,8 @@ input[type="checkbox"] {
 }
 
 .danger-button {
-  padding: 0.4rem 0.6rem;
+  width: 100%;
+  margin-top: 1rem;
   color: #ffb4b4;
   border-color: #663333;
   background: #2a1717;
@@ -156,106 +297,21 @@ input[type="checkbox"] {
   border-color: #a44;
 }
 
-dl {
-  display: grid;
-  gap: 0.75rem;
-  margin: 0;
-}
-
-dl div {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-dt {
-  color: #aaa;
-}
-
-dd {
-  margin: 0;
-  font-weight: 700;
-}
-
-.empty-state {
-  margin: 0;
-  color: #aaa;
-}
-
-.element-list {
-  display: grid;
-  gap: 0.6rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.element-list li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  min-width: 0;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 0.35rem;
-  cursor: pointer;
-}
-
-.element-list li:hover,
-.element-list li.selected {
-  border-color: #555;
-  background: #222;
-}
-
-.element-list li > div {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.element-list span {
-  overflow: hidden;
-  color: #aaa;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-code {
-  border-radius: 4px;
-  padding: 0.15rem 0.35rem;
-  color: #eee;
-  background: #333;
-}
-
-pre {
-  min-height: 16rem;
-  max-height: 32rem;
-  margin: 0;
-  overflow: auto;
-  border: 1px solid #333;
-  border-radius: 4px;
-  padding: 1rem;
-  color: #eee;
-  background: #0b0b0b;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-@media (max-width: 980px) {
-  .workspace-grid,
-  .output-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .app-shell {
-    padding: 1rem;
+@media (max-width: 700px) {
+  .editor-toolbar {
+    flex-wrap: wrap;
   }
 
-  .field-grid {
-    grid-template-columns: 1fr;
+  .floating-inspector {
+    top: auto;
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+    width: auto;
+  }
+
+  .editor-artboard {
+    left: 1rem;
+    width: calc(100vw - 2rem);
   }
 }
