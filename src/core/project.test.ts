@@ -290,6 +290,21 @@ describe("parseProjectJson", () => {
     expect(result).toEqual({ ok: true, project });
   });
 
+  it("loads text elements", () => {
+    const project = addElementToScreen(createProject({ name: "Demo" }), "screen-1", {
+      id: "text-1",
+      type: "text",
+      x: 4,
+      y: 12,
+      text: "Hello",
+      font: "u8g2_font_6x10_tf",
+    });
+
+    const result = parseProjectJson(JSON.stringify(project));
+
+    expect(result).toEqual({ ok: true, project });
+  });
+
   it("rejects invalid JSON", () => {
     const result = parseProjectJson("{");
 

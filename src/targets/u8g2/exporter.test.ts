@@ -55,6 +55,21 @@ const screenWithLine: Screen = {
   ],
 };
 
+const screenWithText: Screen = {
+  id: "screen-1",
+  name: "Main Screen",
+  elements: [
+    {
+      id: "text-1",
+      type: "text",
+      x: 4,
+      y: 12,
+      text: "Hello",
+      font: "u8g2_font_6x10_tf",
+    },
+  ],
+};
+
 describe("generateScreen", () => {
   it("returns empty string for empty screen", () => {
     expect(generateScreen(emptyScreen)).toBe("");
@@ -75,6 +90,73 @@ describe("generateScreen", () => {
   it("generates drawLine for line", () => {
     expect(generateScreen(screenWithLine)).toBe(
       "u8g2.drawLine(0, 0, 127, 63);",
+    );
+  });
+
+  it("generates setFont and drawStr for text", () => {
+    expect(generateScreen(screenWithText)).toBe(
+      "u8g2.setFont(u8g2_font_6x10_tf);\nu8g2.drawStr(4, 12, \"Hello\");",
+    );
+  });
+
+  it("uses drawUTF8 for text with non-ASCII characters (unicode codepoints >= 128)", () => {
+    const screen1: Screen = {
+      id: "screen-1",
+      name: "Main Screen",
+      elements: [
+        {
+          id: "text-1",
+          type: "text",
+          x: 4,
+          y: 12,
+          text: "Mañana",
+          font: "u8g2_font_6x10_tf",
+        },
+      ],
+    };
+
+    expect(generateScreen(screen1)).toBe(
+      "u8g2.setFont(u8g2_font_6x10_tf);\nu8g2.drawUTF8(4, 12, \"Mañana\");",
+    );
+
+    const screen2: Screen = {
+      id: "screen-2",
+      name: "Main Screen 2",
+      elements: [
+        {
+          id: "text-2",
+          type: "text",
+          x: 4,
+          y: 12,
+          text: "Ω",
+          font: "u8g2_font_10x20_t_greek",
+        },
+      ],
+    };
+
+    expect(generateScreen(screen2)).toBe(
+      "u8g2.setFont(u8g2_font_10x20_t_greek);\nu8g2.drawUTF8(4, 12, \"Ω\");",
+    );
+  });
+
+  it("escapes text for C++ strings", () => {
+    const screen: Screen = {
+      id: "screen-1",
+      name: "Main Screen",
+      elements: [
+        {
+          id: "text-1",
+          type: "text",
+          x: 4,
+          y: 12,
+          text: 'A "quote" and \\ path',
+          font: "u8g2_font_6x10_tf",
+        },
+      ],
+    };
+
+    expect(generateScreen(screen)).toBe(
+      'u8g2.setFont(u8g2_font_6x10_tf);\nu8g2.drawStr(4, 12, "A \\"quote\\" and \\\\ path");',
     );
   });
 
@@ -100,11 +182,19 @@ describe("generateScreen", () => {
           x2: 7,
           y2: 8,
         },
+        {
+          id: "text-1",
+          type: "text",
+          x: 9,
+          y: 10,
+          text: "OK",
+          font: "u8g2_font_5x7_tf",
+        },
       ],
     };
 
     expect(generateScreen(screen)).toBe(
-      "u8g2.drawFrame(1, 2, 3, 4);\nu8g2.drawLine(5, 6, 7, 8);",
+      "u8g2.drawFrame(1, 2, 3, 4);\nu8g2.drawLine(5, 6, 7, 8);\nu8g2.setFont(u8g2_font_5x7_tf);\nu8g2.drawStr(9, 10, \"OK\");",
     );
   });
 });

@@ -1,7 +1,9 @@
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { PointerEvent } from "react";
-import type { DesignElement, DeviceConfig, LineElement, RectElement, Screen } from "../core";
+import type { DesignElement, DeviceConfig, LineElement, RectElement, Screen, TextElement } from "../core";
 import { rasterizeLineRuns } from "../core";
+import { measureBitmapText, rasterizeBitmapText } from "./bitmapText";
+import { getU8g2Font, loadGeneratedU8g2Font } from "../targets/u8g2/fonts/index";
 import "./ScreenPreview.css";
 
 export type Point = {
@@ -132,6 +134,17 @@ export const ScreenPreview = memo(function ScreenPreview({
                 getPoint={getPoint}
               />
             );
+          case "text":
+            return (
+              <TextPreview
+                key={renderElement.id}
+                element={renderElement}
+                selected={selected}
+                color={selected ? "#00aaff" : "white"}
+                onElementPointerDown={onElementPointerDown}
+                getPoint={getPoint}
+              />
+            );
         }
       })}
       {draftElement?.type === "rect" && draftElement.width > 0 && draftElement.height > 0 ? (
@@ -221,6 +234,93 @@ const RectPreview = memo(function RectPreview({
           stroke={color}
           strokeWidth={1}
         />
+      )}
+    </g>
+  );
+});
+
+type TextPreviewProps = {
+  element: TextElement;
+  selected: boolean;
+  color: string;
+  getPoint: (event: PointerEvent<any>) => Point;
+  onElementPointerDown?: (elementId: string, point: Point) => void;
+};
+
+const TextPreview = memo(function TextPreview({
+  element,
+  selected,
+  color,
+  getPoint,
+  onElementPointerDown,
+}: TextPreviewProps) {
+  const [generatedFont, setGeneratedFont] = useState<Awaited<ReturnType<typeof loadGeneratedU8g2Font>>>(null);
+  const fallbackFont = getU8g2Font(element.font);
+
+  useEffect(() => {
+    let cancelled = false;
+    setGeneratedFont(null);
+
+    void loadGeneratedU8g2Font(element.font).then((font) => {
+      if (!cancelled) {
+        setGeneratedFont(font);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [element.font]);
+
+  const bitmapMetrics = generatedFont === null ? null : measureBitmapText(element.text, generatedFont);
+  const bitmapRuns =
+    generatedFont === null ? null : rasterizeBitmapText(element.text, generatedFont, element.x, element.y);
+  const left = bitmapMetrics?.left ?? 0;
+  const width = bitmapMetrics?.width ?? Math.max(1, element.text.length * fallbackFont.width);
+  const height = bitmapMetrics?.height ?? fallbackFont.height;
+  const top = bitmapMetrics === null ? element.y - fallbackFont.baseline : element.y + bitmapMetrics.top;
+
+  const handlePointerDown =
+    onElementPointerDown === undefined
+      ? undefined
+      : (event: PointerEvent<SVGElement>) => {
+          event.stopPropagation();
+          const svg = event.currentTarget.closest("svg");
+          if (svg) {
+            svg.setPointerCapture(event.pointerId);
+          }
+          onElementPointerDown(element.id, getPoint(event));
+        };
+
+  return (
+    <g onPointerDown={handlePointerDown}>
+      <rect x={element.x + left} y={top} width={width} height={height} fill="transparent" stroke="none" />
+      {selected ? (
+        <rect
+          x={element.x + left - 0.5}
+          y={top - 0.5}
+          width={width + 1}
+          height={height + 1}
+          fill="none"
+          stroke={color}
+          strokeWidth={1}
+        />
+      ) : null}
+      {bitmapRuns !== null ? (
+        bitmapRuns.map((run) => (
+          <rect key={`${run.x},${run.y},${run.width}`} x={run.x} y={run.y} width={run.width} height={1} fill={color} />
+        ))
+      ) : (
+        <text
+          x={element.x}
+          y={element.y}
+          fill={color}
+          fontFamily="monospace"
+          fontSize={fallbackFont.height}
+          dominantBaseline="alphabetic"
+        >
+          {element.text}
+        </text>
       )}
     </g>
   );

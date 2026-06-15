@@ -1,0 +1,108 @@
+import type { BitmapFont } from "../../../../../preview/bitmapFont";
+
+const font: BitmapFont = {
+  "name": "open_iconic_check_1x",
+  "lineHeight": 0,
+  "ascent": 0,
+  "descent": 0,
+  "boundingBox": {
+    "width": 16,
+    "height": 16,
+    "xOffset": 0,
+    "yOffset": 0
+  },
+  "glyphs": {
+    "64": {
+      "codePoint": 64,
+      "width": 8,
+      "height": 8,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 8,
+      "bitmap": [
+        "00000000",
+        "00000010",
+        "00000111",
+        "01001110",
+        "11111100",
+        "01111000",
+        "00110000",
+        "00000000"
+      ]
+    },
+    "65": {
+      "codePoint": 65,
+      "width": 8,
+      "height": 8,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 8,
+      "bitmap": [
+        "00111100",
+        "01111110",
+        "11111011",
+        "11110011",
+        "11000111",
+        "11111111",
+        "01111110",
+        "00111100"
+      ]
+    },
+    "66": {
+      "codePoint": 66,
+      "width": 8,
+      "height": 8,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 8,
+      "bitmap": [
+        "00111100",
+        "01111110",
+        "11011011",
+        "11100111",
+        "11100111",
+        "11011011",
+        "01111110",
+        "00111100"
+      ]
+    },
+    "67": {
+      "codePoint": 67,
+      "width": 8,
+      "height": 8,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 8,
+      "bitmap": [
+        "11111000",
+        "10000010",
+        "10000100",
+        "10011000",
+        "10000010",
+        "10000010",
+        "11111110",
+        "00000000"
+      ]
+    },
+    "68": {
+      "codePoint": 68,
+      "width": 8,
+      "height": 8,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 8,
+      "bitmap": [
+        "01000010",
+        "11100111",
+        "01111110",
+        "00111100",
+        "00111100",
+        "01111110",
+        "11100111",
+        "01000010"
+      ]
+    }
+  }
+};
+
+export default font;

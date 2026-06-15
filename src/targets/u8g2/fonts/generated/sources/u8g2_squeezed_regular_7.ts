@@ -1,0 +1,1526 @@
+import type { BitmapFont } from "../../../../../preview/bitmapFont";
+
+const font: BitmapFont = {
+  "name": "u8g2_squeezed_regular_7",
+  "lineHeight": 8,
+  "ascent": 7,
+  "descent": 1,
+  "boundingBox": {
+    "width": 9,
+    "height": 7,
+    "xOffset": 0,
+    "yOffset": -1
+  },
+  "glyphs": {
+    "32": {
+      "codePoint": 32,
+      "width": 0,
+      "height": 0,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 2,
+      "bitmap": []
+    },
+    "33": {
+      "codePoint": 33,
+      "width": 1,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 2,
+      "bitmap": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "0",
+        "1"
+      ]
+    },
+    "34": {
+      "codePoint": 34,
+      "width": 3,
+      "height": 2,
+      "xOffset": 0,
+      "yOffset": 5,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "101"
+      ]
+    },
+    "35": {
+      "codePoint": 35,
+      "width": 5,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 1,
+      "xAdvance": 6,
+      "bitmap": [
+        "01010",
+        "11111",
+        "01010",
+        "11111",
+        "01010"
+      ]
+    },
+    "36": {
+      "codePoint": 36,
+      "width": 5,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 6,
+      "bitmap": [
+        "00100",
+        "01111",
+        "10100",
+        "01110",
+        "00101",
+        "11110",
+        "00100"
+      ]
+    },
+    "37": {
+      "codePoint": 37,
+      "width": 3,
+      "height": 6,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "001",
+        "010",
+        "010",
+        "100",
+        "101"
+      ]
+    },
+    "38": {
+      "codePoint": 38,
+      "width": 4,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 5,
+      "bitmap": [
+        "0100",
+        "1010",
+        "1010",
+        "0100",
+        "1010",
+        "1011",
+        "0101"
+      ]
+    },
+    "39": {
+      "codePoint": 39,
+      "width": 1,
+      "height": 2,
+      "xOffset": 0,
+      "yOffset": 5,
+      "xAdvance": 2,
+      "bitmap": [
+        "1",
+        "1"
+      ]
+    },
+    "40": {
+      "codePoint": 40,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "01",
+        "10",
+        "10",
+        "10",
+        "10",
+        "10",
+        "01"
+      ]
+    },
+    "41": {
+      "codePoint": 41,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "10",
+        "01",
+        "01",
+        "01",
+        "01",
+        "01",
+        "10"
+      ]
+    },
+    "42": {
+      "codePoint": 42,
+      "width": 3,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 1,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "010",
+        "111",
+        "010",
+        "101"
+      ]
+    },
+    "43": {
+      "codePoint": 43,
+      "width": 3,
+      "height": 3,
+      "xOffset": 0,
+      "yOffset": 2,
+      "xAdvance": 4,
+      "bitmap": [
+        "010",
+        "111",
+        "010"
+      ]
+    },
+    "44": {
+      "codePoint": 44,
+      "width": 1,
+      "height": 2,
+      "xOffset": 0,
+      "yOffset": -1,
+      "xAdvance": 2,
+      "bitmap": [
+        "1",
+        "1"
+      ]
+    },
+    "45": {
+      "codePoint": 45,
+      "width": 2,
+      "height": 1,
+      "xOffset": 0,
+      "yOffset": 3,
+      "xAdvance": 3,
+      "bitmap": [
+        "11"
+      ]
+    },
+    "46": {
+      "codePoint": 46,
+      "width": 1,
+      "height": 1,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 2,
+      "bitmap": [
+        "1"
+      ]
+    },
+    "47": {
+      "codePoint": 47,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "001",
+        "001",
+        "010",
+        "010",
+        "010",
+        "100",
+        "100"
+      ]
+    },
+    "48": {
+      "codePoint": 48,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "010",
+        "101",
+        "101",
+        "101",
+        "101",
+        "101",
+        "010"
+      ]
+    },
+    "49": {
+      "codePoint": 49,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "01",
+        "11",
+        "01",
+        "01",
+        "01",
+        "01",
+        "01"
+      ]
+    },
+    "50": {
+      "codePoint": 50,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "10",
+        "01",
+        "01",
+        "01",
+        "10",
+        "10",
+        "11"
+      ]
+    },
+    "51": {
+      "codePoint": 51,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "11",
+        "01",
+        "01",
+        "10",
+        "01",
+        "01",
+        "10"
+      ]
+    },
+    "52": {
+      "codePoint": 52,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "101",
+        "101",
+        "111",
+        "001",
+        "001",
+        "001"
+      ]
+    },
+    "53": {
+      "codePoint": 53,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "11",
+        "10",
+        "10",
+        "01",
+        "01",
+        "01",
+        "10"
+      ]
+    },
+    "54": {
+      "codePoint": 54,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "010",
+        "100",
+        "100",
+        "110",
+        "101",
+        "101",
+        "010"
+      ]
+    },
+    "55": {
+      "codePoint": 55,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "111",
+        "001",
+        "001",
+        "010",
+        "010",
+        "010",
+        "010"
+      ]
+    },
+    "56": {
+      "codePoint": 56,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "010",
+        "101",
+        "101",
+        "010",
+        "101",
+        "101",
+        "010"
+      ]
+    },
+    "57": {
+      "codePoint": 57,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "010",
+        "101",
+        "101",
+        "011",
+        "001",
+        "001",
+        "010"
+      ]
+    },
+    "58": {
+      "codePoint": 58,
+      "width": 1,
+      "height": 4,
+      "xOffset": 0,
+      "yOffset": 1,
+      "xAdvance": 2,
+      "bitmap": [
+        "1",
+        "0",
+        "0",
+        "1"
+      ]
+    },
+    "59": {
+      "codePoint": 59,
+      "width": 1,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": -1,
+      "xAdvance": 2,
+      "bitmap": [
+        "1",
+        "0",
+        "0",
+        "1",
+        "1"
+      ]
+    },
+    "60": {
+      "codePoint": 60,
+      "width": 3,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 1,
+      "xAdvance": 4,
+      "bitmap": [
+        "001",
+        "010",
+        "100",
+        "010",
+        "001"
+      ]
+    },
+    "61": {
+      "codePoint": 61,
+      "width": 2,
+      "height": 3,
+      "xOffset": 0,
+      "yOffset": 3,
+      "xAdvance": 3,
+      "bitmap": [
+        "11",
+        "00",
+        "11"
+      ]
+    },
+    "62": {
+      "codePoint": 62,
+      "width": 3,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 1,
+      "xAdvance": 4,
+      "bitmap": [
+        "100",
+        "010",
+        "001",
+        "010",
+        "100"
+      ]
+    },
+    "63": {
+      "codePoint": 63,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "10",
+        "01",
+        "01",
+        "10",
+        "10",
+        "00",
+        "10"
+      ]
+    },
+    "64": {
+      "codePoint": 64,
+      "width": 4,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 5,
+      "bitmap": [
+        "0110",
+        "1001",
+        "1001",
+        "1011",
+        "1011",
+        "1000",
+        "0111"
+      ]
+    },
+    "65": {
+      "codePoint": 65,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "010",
+        "101",
+        "101",
+        "111",
+        "101",
+        "101",
+        "101"
+      ]
+    },
+    "66": {
+      "codePoint": 66,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "110",
+        "101",
+        "101",
+        "110",
+        "101",
+        "101",
+        "110"
+      ]
+    },
+    "67": {
+      "codePoint": 67,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "01",
+        "10",
+        "10",
+        "10",
+        "10",
+        "10",
+        "01"
+      ]
+    },
+    "68": {
+      "codePoint": 68,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "110",
+        "101",
+        "101",
+        "101",
+        "101",
+        "101",
+        "110"
+      ]
+    },
+    "69": {
+      "codePoint": 69,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "11",
+        "10",
+        "10",
+        "11",
+        "10",
+        "10",
+        "11"
+      ]
+    },
+    "70": {
+      "codePoint": 70,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "11",
+        "10",
+        "10",
+        "11",
+        "10",
+        "10",
+        "10"
+      ]
+    },
+    "71": {
+      "codePoint": 71,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "011",
+        "100",
+        "100",
+        "101",
+        "101",
+        "101",
+        "011"
+      ]
+    },
+    "72": {
+      "codePoint": 72,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "101",
+        "101",
+        "111",
+        "101",
+        "101",
+        "101"
+      ]
+    },
+    "73": {
+      "codePoint": 73,
+      "width": 1,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 2,
+      "bitmap": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "74": {
+      "codePoint": 74,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "01",
+        "01",
+        "01",
+        "01",
+        "01",
+        "01",
+        "11"
+      ]
+    },
+    "75": {
+      "codePoint": 75,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "101",
+        "101",
+        "110",
+        "101",
+        "101",
+        "101"
+      ]
+    },
+    "76": {
+      "codePoint": 76,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "10",
+        "10",
+        "10",
+        "10",
+        "10",
+        "10",
+        "11"
+      ]
+    },
+    "77": {
+      "codePoint": 77,
+      "width": 5,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 6,
+      "bitmap": [
+        "10001",
+        "11011",
+        "10101",
+        "10001",
+        "10001",
+        "10001",
+        "10001"
+      ]
+    },
+    "78": {
+      "codePoint": 78,
+      "width": 4,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 5,
+      "bitmap": [
+        "1001",
+        "1101",
+        "1011",
+        "1001",
+        "1001",
+        "1001",
+        "1001"
+      ]
+    },
+    "79": {
+      "codePoint": 79,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "010",
+        "101",
+        "101",
+        "101",
+        "101",
+        "101",
+        "010"
+      ]
+    },
+    "80": {
+      "codePoint": 80,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "110",
+        "101",
+        "101",
+        "110",
+        "100",
+        "100",
+        "100"
+      ]
+    },
+    "81": {
+      "codePoint": 81,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "010",
+        "101",
+        "101",
+        "101",
+        "101",
+        "101",
+        "011"
+      ]
+    },
+    "82": {
+      "codePoint": 82,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "110",
+        "101",
+        "101",
+        "110",
+        "101",
+        "101",
+        "101"
+      ]
+    },
+    "83": {
+      "codePoint": 83,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "01",
+        "10",
+        "10",
+        "01",
+        "01",
+        "01",
+        "10"
+      ]
+    },
+    "84": {
+      "codePoint": 84,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "111",
+        "010",
+        "010",
+        "010",
+        "010",
+        "010",
+        "010"
+      ]
+    },
+    "85": {
+      "codePoint": 85,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "101",
+        "101",
+        "101",
+        "101",
+        "101",
+        "111"
+      ]
+    },
+    "86": {
+      "codePoint": 86,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "101",
+        "101",
+        "101",
+        "101",
+        "010",
+        "010"
+      ]
+    },
+    "87": {
+      "codePoint": 87,
+      "width": 5,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 6,
+      "bitmap": [
+        "10001",
+        "10001",
+        "10001",
+        "10001",
+        "10101",
+        "10101",
+        "01010"
+      ]
+    },
+    "88": {
+      "codePoint": 88,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "101",
+        "010",
+        "010",
+        "101",
+        "101",
+        "101"
+      ]
+    },
+    "89": {
+      "codePoint": 89,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "101",
+        "101",
+        "010",
+        "010",
+        "010",
+        "010"
+      ]
+    },
+    "90": {
+      "codePoint": 90,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "11",
+        "01",
+        "01",
+        "10",
+        "10",
+        "10",
+        "11"
+      ]
+    },
+    "91": {
+      "codePoint": 91,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "11",
+        "10",
+        "10",
+        "10",
+        "10",
+        "10",
+        "11"
+      ]
+    },
+    "92": {
+      "codePoint": 92,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "100",
+        "100",
+        "010",
+        "010",
+        "010",
+        "001",
+        "001"
+      ]
+    },
+    "93": {
+      "codePoint": 93,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "11",
+        "01",
+        "01",
+        "01",
+        "01",
+        "01",
+        "11"
+      ]
+    },
+    "94": {
+      "codePoint": 94,
+      "width": 3,
+      "height": 2,
+      "xOffset": 0,
+      "yOffset": 5,
+      "xAdvance": 4,
+      "bitmap": [
+        "010",
+        "101"
+      ]
+    },
+    "95": {
+      "codePoint": 95,
+      "width": 2,
+      "height": 1,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "11"
+      ]
+    },
+    "96": {
+      "codePoint": 96,
+      "width": 2,
+      "height": 2,
+      "xOffset": 0,
+      "yOffset": 5,
+      "xAdvance": 3,
+      "bitmap": [
+        "10",
+        "01"
+      ]
+    },
+    "97": {
+      "codePoint": 97,
+      "width": 3,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "011",
+        "101",
+        "101",
+        "101",
+        "011"
+      ]
+    },
+    "98": {
+      "codePoint": 98,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "100",
+        "100",
+        "110",
+        "101",
+        "101",
+        "101",
+        "110"
+      ]
+    },
+    "99": {
+      "codePoint": 99,
+      "width": 2,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "01",
+        "10",
+        "10",
+        "10",
+        "01"
+      ]
+    },
+    "100": {
+      "codePoint": 100,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "001",
+        "001",
+        "011",
+        "101",
+        "101",
+        "101",
+        "011"
+      ]
+    },
+    "101": {
+      "codePoint": 101,
+      "width": 3,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "010",
+        "101",
+        "111",
+        "100",
+        "011"
+      ]
+    },
+    "102": {
+      "codePoint": 102,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "01",
+        "10",
+        "11",
+        "10",
+        "10",
+        "10",
+        "10"
+      ]
+    },
+    "103": {
+      "codePoint": 103,
+      "width": 3,
+      "height": 6,
+      "xOffset": 0,
+      "yOffset": -1,
+      "xAdvance": 4,
+      "bitmap": [
+        "011",
+        "101",
+        "101",
+        "011",
+        "001",
+        "110"
+      ]
+    },
+    "104": {
+      "codePoint": 104,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "100",
+        "100",
+        "110",
+        "101",
+        "101",
+        "101",
+        "101"
+      ]
+    },
+    "105": {
+      "codePoint": 105,
+      "width": 1,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 2,
+      "bitmap": [
+        "1",
+        "0",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "106": {
+      "codePoint": 106,
+      "width": 2,
+      "height": 8,
+      "xOffset": 0,
+      "yOffset": -1,
+      "xAdvance": 3,
+      "bitmap": [
+        "01",
+        "00",
+        "01",
+        "01",
+        "01",
+        "01",
+        "01",
+        "10"
+      ]
+    },
+    "107": {
+      "codePoint": 107,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "100",
+        "100",
+        "101",
+        "110",
+        "101",
+        "101",
+        "101"
+      ]
+    },
+    "108": {
+      "codePoint": 108,
+      "width": 1,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 2,
+      "bitmap": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "109": {
+      "codePoint": 109,
+      "width": 5,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 6,
+      "bitmap": [
+        "11110",
+        "10101",
+        "10101",
+        "10101",
+        "10101"
+      ]
+    },
+    "110": {
+      "codePoint": 110,
+      "width": 3,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "110",
+        "101",
+        "101",
+        "101",
+        "101"
+      ]
+    },
+    "111": {
+      "codePoint": 111,
+      "width": 3,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "010",
+        "101",
+        "101",
+        "101",
+        "010"
+      ]
+    },
+    "112": {
+      "codePoint": 112,
+      "width": 3,
+      "height": 6,
+      "xOffset": 0,
+      "yOffset": -1,
+      "xAdvance": 4,
+      "bitmap": [
+        "110",
+        "101",
+        "101",
+        "101",
+        "110",
+        "100"
+      ]
+    },
+    "113": {
+      "codePoint": 113,
+      "width": 3,
+      "height": 6,
+      "xOffset": 0,
+      "yOffset": -1,
+      "xAdvance": 4,
+      "bitmap": [
+        "011",
+        "101",
+        "101",
+        "101",
+        "011",
+        "001"
+      ]
+    },
+    "114": {
+      "codePoint": 114,
+      "width": 3,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "110",
+        "100",
+        "100",
+        "100"
+      ]
+    },
+    "115": {
+      "codePoint": 115,
+      "width": 2,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "01",
+        "10",
+        "01",
+        "01",
+        "10"
+      ]
+    },
+    "116": {
+      "codePoint": 116,
+      "width": 2,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "10",
+        "10",
+        "11",
+        "10",
+        "10",
+        "10",
+        "01"
+      ]
+    },
+    "117": {
+      "codePoint": 117,
+      "width": 3,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "101",
+        "101",
+        "101",
+        "111"
+      ]
+    },
+    "118": {
+      "codePoint": 118,
+      "width": 3,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "101",
+        "101",
+        "101",
+        "110"
+      ]
+    },
+    "119": {
+      "codePoint": 119,
+      "width": 5,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 6,
+      "bitmap": [
+        "10001",
+        "10001",
+        "10101",
+        "10101",
+        "01010"
+      ]
+    },
+    "120": {
+      "codePoint": 120,
+      "width": 3,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "010",
+        "010",
+        "101",
+        "101"
+      ]
+    },
+    "121": {
+      "codePoint": 121,
+      "width": 3,
+      "height": 6,
+      "xOffset": 0,
+      "yOffset": -1,
+      "xAdvance": 4,
+      "bitmap": [
+        "101",
+        "101",
+        "101",
+        "011",
+        "001",
+        "010"
+      ]
+    },
+    "122": {
+      "codePoint": 122,
+      "width": 2,
+      "height": 5,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 3,
+      "bitmap": [
+        "11",
+        "01",
+        "10",
+        "10",
+        "11"
+      ]
+    },
+    "123": {
+      "codePoint": 123,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "001",
+        "010",
+        "010",
+        "110",
+        "010",
+        "010",
+        "001"
+      ]
+    },
+    "124": {
+      "codePoint": 124,
+      "width": 1,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 2,
+      "bitmap": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "125": {
+      "codePoint": 125,
+      "width": 3,
+      "height": 7,
+      "xOffset": 0,
+      "yOffset": 0,
+      "xAdvance": 4,
+      "bitmap": [
+        "100",
+        "010",
+        "010",
+        "011",
+        "010",
+        "010",
+        "100"
+      ]
+    },
+    "126": {
+      "codePoint": 126,
+      "width": 4,
+      "height": 2,
+      "xOffset": 0,
+      "yOffset": 5,
+      "xAdvance": 5,
+      "bitmap": [
+        "0101",
+        "1010"
+      ]
+    }
+  }
+};
+
+export default font;

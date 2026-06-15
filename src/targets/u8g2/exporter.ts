@@ -34,7 +34,28 @@ function generateElement(element: DesignElement): string {
         : `u8g2.drawFrame(${element.x}, ${element.y}, ${element.width}, ${element.height});`;
     case "line":
       return `u8g2.drawLine(${element.x1}, ${element.y1}, ${element.x2}, ${element.y2});`;
+    case "text": {
+      const drawFunction = requiresUtf8(element.text) ? "drawUTF8" : "drawStr";
+
+      return [
+        `u8g2.setFont(${element.font});`,
+        `u8g2.${drawFunction}(${element.x}, ${element.y}, "${escapeCppString(element.text)}");`,
+      ].join("\n");
+    }
   }
+}
+
+function requiresUtf8(value: string): boolean {
+  return [...value].some((character) => character.codePointAt(0)! >= 128);
+}
+
+function escapeCppString(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t");
 }
 
 function toFunctionName(name: string, usedNames: Set<string>): string {

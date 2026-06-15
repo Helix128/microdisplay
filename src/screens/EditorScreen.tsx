@@ -9,6 +9,7 @@ import {
   Slash,
   RectangleHorizontal,
   Grid2x2,
+  Type,
 } from "lucide-react";
 import {
   type PointerEvent,
@@ -27,6 +28,7 @@ import {
   type LineElement,
   type Project,
   type RectElement,
+  type TextElement,
   updateElementInScreen,
 } from "../core";
 import {
@@ -35,12 +37,25 @@ import {
   ScreenPreview,
 } from "../preview/ScreenPreview";
 import { u8g2 } from "../exporters";
+import {
+  defaultU8g2FontName,
+  getCharsetLabel,
+  getPurposeLabel,
+  getU8g2FontFamilies,
+  getU8g2FontFamily,
+  getU8g2FontVariant,
+  resolveU8g2FontVariant,
+  type U8g2FontCharset,
+  type U8g2FontPurpose,
+} from "../targets/u8g2/fonts/index";
 import { projectStorage } from "../platform/projectStorage";
 import { createId } from "../utils/id";
 
-type Tool = "select" | "pan" | "rect" | "line";
+type Tool = "select" | "pan" | "rect" | "line" | "text";
 
 type CopyStatus = "idle" | "copied";
+
+const u8g2FontFamilies = getU8g2FontFamilies();
 
 type EditorScreenProps = {
   project: Project;
@@ -73,6 +88,8 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
   const [showPixelGrid, setShowPixelGrid] = useState(true);
   const [rectFilled, setRectFilled] = useState(false);
+  const [textContent, setTextContent] = useState("Texto");
+  const [textFont, setTextFont] = useState(defaultU8g2FontName);
   const [dragPreviewElement, setDragPreviewElement] = useState<DesignElement | null>(null);
   const artboardRef = useRef<HTMLDivElement>(null);
   const dragOriginalElementRef = useRef<DesignElement | null>(null);
@@ -110,9 +127,24 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
       if (tool === "rect" || tool === "line") {
         setDragStart(point);
         setDragCurrent(point);
+        return;
+      }
+
+      if (tool === "text") {
+        const element: TextElement = {
+          id: createId("text"),
+          type: "text",
+          x: point.x,
+          y: point.y,
+          text: textContent,
+          font: textFont,
+        };
+
+        onProjectChange(addElementToScreen(project, project.activeScreenId, element));
+        setSelectedElementId(element.id);
       }
     },
-    [tool],
+    [onProjectChange, project, textContent, textFont, tool],
   );
 
   const handlePreviewPointerMove = useCallback(
@@ -122,20 +154,30 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         const dy = point.y - dragStart.y;
         const original = dragOriginalElementRef.current;
 
-        if (original.type === "rect") {
-          setDragPreviewElement({
-            ...original,
-            x: original.x + dx,
-            y: original.y + dy,
-          });
-        } else {
-          setDragPreviewElement({
-            ...original,
-            x1: original.x1 + dx,
-            y1: original.y1 + dy,
-            x2: original.x2 + dx,
-            y2: original.y2 + dy,
-          });
+        switch (original.type) {
+          case "rect":
+            setDragPreviewElement({
+              ...original,
+              x: original.x + dx,
+              y: original.y + dy,
+            });
+            break;
+          case "line":
+            setDragPreviewElement({
+              ...original,
+              x1: original.x1 + dx,
+              y1: original.y1 + dy,
+              x2: original.x2 + dx,
+              y2: original.y2 + dy,
+            });
+            break;
+          case "text":
+            setDragPreviewElement({
+              ...original,
+              x: original.x + dx,
+              y: original.y + dy,
+            });
+            break;
         }
         return;
       }
@@ -447,6 +489,15 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
             <Slash />
           </button>
           <button
+            className={tool === "text" ? "active" : ""}
+            type="button"
+            aria-label="Texto"
+            data-tooltip="Texto"
+            onClick={() => setTool("text")}
+          >
+            <Type />
+          </button>
+          <button
             className={showPixelGrid ? "active" : ""}
             type="button"
             aria-label="Grilla de pixeles"
@@ -506,6 +557,23 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
           >
             <PaintBucket />
           </button>
+        </div>
+      ) : null}
+
+      {tool === "text" ? (
+        <div className="tool-options-panel tool-options-panel-wide" aria-label="Opciones de texto">
+          <h2>Opciones</h2>
+          <div className="editor-form">
+            <label>
+              Contenido
+              <input
+                type="text"
+                value={textContent}
+                onChange={(event) => setTextContent(event.currentTarget.value)}
+              />
+            </label>
+            <TextFontFields font={textFont} onChange={setTextFont} />
+          </div>
         </div>
       ) : null}
 
@@ -584,7 +652,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
                 Relleno
               </label>
             </div>
-          ) : (
+          ) : selectedElement.type === "line" ? (
             <div className="field-grid">
               <NumberField
                 label="X1"
@@ -605,6 +673,35 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
                 label="Y2"
                 value={selectedElement.y2}
                 onChange={(y2) => updateSelectedElement({ ...selectedElement, y2 })}
+              />
+            </div>
+          ) : (
+            <div className="editor-form">
+              <div className="field-grid">
+                <NumberField
+                  label="X"
+                  value={selectedElement.x}
+                  onChange={(x) => updateSelectedElement({ ...selectedElement, x })}
+                />
+                <NumberField
+                  label="Y"
+                  value={selectedElement.y}
+                  onChange={(y) => updateSelectedElement({ ...selectedElement, y })}
+                />
+              </div>
+              <label>
+                Contenido
+                <input
+                  type="text"
+                  value={selectedElement.text}
+                  onChange={(event) =>
+                    updateSelectedElement({ ...selectedElement, text: event.currentTarget.value })
+                  }
+                />
+              </label>
+              <TextFontFields
+                font={selectedElement.font}
+                onChange={(font) => updateSelectedElement({ ...selectedElement, font })}
               />
             </div>
           )}
@@ -629,6 +726,77 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         </aside>
       ) : null}
     </main>
+  );
+}
+
+function TextFontFields({ font, onChange }: { font: string; onChange: (font: string) => void }) {
+  const variant = getU8g2FontVariant(font);
+  const family = getU8g2FontFamily(variant.family);
+  const purposes = family?.purposes ?? [variant.purpose];
+  const charsets = family?.charsets ?? [variant.charset];
+
+  return (
+    <div className="editor-form">
+      <label>
+        Familia
+        <select
+          value={variant.family}
+          onChange={(event) => onChange(resolveU8g2FontVariant({ currentFont: font, family: event.currentTarget.value }))}
+        >
+          {u8g2FontFamilies.map((fontFamily) => (
+            <option key={fontFamily.family} value={fontFamily.family}>
+              {fontFamily.family}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {purposes.length > 1 ? (
+        <label>
+          Estilo
+          <select
+            value={variant.purpose}
+            onChange={(event) =>
+              onChange(
+                resolveU8g2FontVariant({
+                  currentFont: font,
+                  purpose: event.currentTarget.value as U8g2FontPurpose,
+                }),
+              )
+            }
+          >
+            {purposes.map((purpose) => (
+              <option key={purpose} value={purpose}>
+                {getPurposeLabel(purpose)}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
+      {charsets.length > 1 ? (
+        <label>
+          Caracteres
+          <select
+            value={variant.charset}
+            onChange={(event) =>
+              onChange(
+                resolveU8g2FontVariant({
+                  currentFont: font,
+                  charset: event.currentTarget.value as U8g2FontCharset,
+                }),
+              )
+            }
+          >
+            {charsets.map((charset) => (
+              <option key={charset} value={charset}>
+                {getCharsetLabel(charset)}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+    </div>
   );
 }
 
@@ -659,6 +827,8 @@ function getElementLabel(element: DesignElement): string {
       return "Rectángulo";
     case "line":
       return "Línea";
+    case "text":
+      return "Texto";
   }
 }
 

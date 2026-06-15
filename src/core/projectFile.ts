@@ -1,4 +1,4 @@
-import type { DesignElement, LineElement, RectElement, Screen } from "./design";
+import type { DesignElement, LineElement, RectElement, Screen, TextElement } from "./design";
 import type { Project } from "./project";
 
 export type ProjectParseResult =
@@ -122,6 +122,10 @@ function parseElement(value: unknown): DesignElement | null {
     return parseLineElement(value);
   }
 
+  if (value.type === "text") {
+    return parseTextElement(value);
+  }
+
   return null;
 }
 
@@ -169,10 +173,36 @@ function parseLineElement(value: Record<string, unknown>): LineElement | null {
   };
 }
 
+function parseTextElement(value: Record<string, unknown>): TextElement | null {
+  if (
+    typeof value.id !== "string" ||
+    !isValidNumber(value.x) ||
+    !isValidNumber(value.y) ||
+    typeof value.text !== "string" ||
+    typeof value.font !== "string" ||
+    !isValidFontName(value.font)
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    type: "text",
+    x: value.x,
+    y: value.y,
+    text: value.text,
+    font: value.font,
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isValidNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function isValidFontName(value: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
 }

@@ -4,7 +4,7 @@ export type Screen = {
   elements: DesignElement[];
 };
 
-export type DesignElement = RectElement | LineElement;
+export type DesignElement = RectElement | LineElement | TextElement;
 
 export type RectElement = {
   id: string;
@@ -23,4 +23,13 @@ export type LineElement = {
   y1: number;
   x2: number;
   y2: number;
+};
+
+export type TextElement = {
+  id: string;
+  type: "text";
+  x: number;
+  y: number;
+  text: string;
+  font: string;
 };

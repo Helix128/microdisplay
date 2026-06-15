@@ -1,4 +1,4 @@
-export type { DesignElement, LineElement, RectElement, Screen } from "./design";
+export type { DesignElement, LineElement, RectElement, Screen, TextElement } from "./design";
 export {
   addElementToScreen,
   addScreen,
