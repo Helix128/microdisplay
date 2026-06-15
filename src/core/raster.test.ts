@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rasterizeLine, rasterizeLineRuns } from "./index";
+import { rasterizeLine, rasterizeLineRuns } from "./raster";
 
 describe("rasterizeLine", () => {
   it("rasterizes a single point", () => {

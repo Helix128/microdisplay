@@ -11,3 +11,5 @@ export {
 export type { CreateProjectOptions, DeviceConfig, Project } from "./project";
 export { parseProject, parseProjectJson } from "./projectFile";
 export type { ProjectParseResult } from "./projectFile";
+export { rasterizeLine, rasterizeLineRuns } from "./raster";
+export type { RasterPoint, RasterRun } from "./raster";

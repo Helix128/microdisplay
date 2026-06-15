@@ -74,12 +74,7 @@ export function rasterizeLine(x1: number, y1: number, x2: number, y2: number): R
   return points;
 }
 
-export function rasterizeLineRuns(
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-): RasterRun[] {
+export function rasterizeLineRuns(x1: number, y1: number, x2: number, y2: number): RasterRun[] {
   const points = rasterizeLine(x1, y1, x2, y2);
 
   if (points.length === 0) {

@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo } from "react";
 import type { PointerEvent } from "react";
 import type { DesignElement, DeviceConfig, LineElement, RectElement, Screen } from "../core";
-import { rasterizeLineRuns } from "../targets/u8g2";
+import { rasterizeLineRuns } from "../core";
 import "./ScreenPreview.css";
 
 export type Point = {
