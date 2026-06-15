@@ -21,6 +21,5 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  "exclude": ["src/targets/u8g2/fonts/generated/sources"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

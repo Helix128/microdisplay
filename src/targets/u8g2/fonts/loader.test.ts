@@ -1,5 +1,38 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import { loadGeneratedU8g2Font } from "./loader";
+import fs from "fs";
+import path from "path";
+
+// Simular fetch global para cargar las fuentes desde el sistema de archivos durante los tests
+const originalFetch = globalThis.fetch;
+
+beforeAll(() => {
+  globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+    if (url.startsWith("/fonts/sources/")) {
+      const filename = url.replace("/fonts/sources/", "");
+      const filePath = path.resolve(__dirname, "../../../../public/fonts/sources", filename);
+      try {
+        const content = fs.readFileSync(filePath, "utf8");
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(JSON.parse(content)),
+        } as Response);
+      } catch (error) {
+        return Promise.resolve({
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+        } as Response);
+      }
+    }
+    return originalFetch(url);
+  });
+});
+
+afterAll(() => {
+  globalThis.fetch = originalFetch;
+});
 
 describe("loadGeneratedU8g2Font", () => {
   it("loads generated 5x7 font", async () => {

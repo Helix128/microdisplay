@@ -2,7 +2,6 @@ import type { BitmapFont } from "../../../preview/bitmapFont";
 import { generatedU8g2FontManifest } from "./generated/manifest.generated";
 import { applyVariantToFont } from "./variant";
 
-const sourceModules = import.meta.glob<{ default: BitmapFont }>("./generated/sources/*.ts");
 const fontCache = new Map<string, Promise<BitmapFont | null>>();
 const variantByName = new Map(generatedU8g2FontManifest.map((entry) => [entry.name, entry]));
 
@@ -25,12 +24,16 @@ async function loadFont(name: string): Promise<BitmapFont | null> {
     return null;
   }
 
-  const moduleLoader = sourceModules[`./generated/sources/${variant.sourceKey}.ts`];
-
-  if (moduleLoader === undefined) {
+  try {
+    const response = await fetch(`/fonts/sources/${variant.sourceKey}.json`);
+    if (!response.ok) {
+      console.error(`Error HTTP ${response.status} al cargar la fuente: ${variant.sourceKey}`);
+      return null;
+    }
+    const fontData = (await response.json()) as BitmapFont;
+    return applyVariantToFont(fontData, variant);
+  } catch (error) {
+    console.error(`Error al cargar o parsear la fuente ${variant.sourceKey}:`, error);
     return null;
   }
-
-  const module = await moduleLoader();
-  return applyVariantToFont(module.default, variant);
 }
