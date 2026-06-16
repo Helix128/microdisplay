@@ -55,6 +55,36 @@ const screenWithLine: Screen = {
   ],
 };
 
+const screenWithCircle: Screen = {
+  id: "screen-1",
+  name: "Main Screen",
+  elements: [
+    {
+      id: "circle-1",
+      type: "circle",
+      x: 20,
+      y: 21,
+      radius: 8,
+      filled: false,
+    },
+  ],
+};
+
+const screenWithFilledCircle: Screen = {
+  id: "screen-1",
+  name: "Main Screen",
+  elements: [
+    {
+      id: "circle-1",
+      type: "circle",
+      x: 40,
+      y: 22,
+      radius: 9,
+      filled: true,
+    },
+  ],
+};
+
 const screenWithText: Screen = {
   id: "screen-1",
   name: "Main Screen",
@@ -90,6 +120,18 @@ describe("generateScreen", () => {
   it("generates drawLine for line", () => {
     expect(generateScreen(screenWithLine)).toBe(
       "u8g2.drawLine(0, 0, 127, 63);",
+    );
+  });
+
+  it("generates drawCircle for unfilled circle", () => {
+    expect(generateScreen(screenWithCircle)).toBe(
+      "u8g2.drawCircle(20, 21, 8, U8G2_DRAW_ALL);",
+    );
+  });
+
+  it("generates drawDisc for filled circle", () => {
+    expect(generateScreen(screenWithFilledCircle)).toBe(
+      "u8g2.drawDisc(40, 22, 9, U8G2_DRAW_ALL);",
     );
   });
 
@@ -183,6 +225,14 @@ describe("generateScreen", () => {
           y2: 8,
         },
         {
+          id: "circle-1",
+          type: "circle",
+          x: 11,
+          y: 12,
+          radius: 4,
+          filled: true,
+        },
+        {
           id: "text-1",
           type: "text",
           x: 9,
@@ -194,7 +244,7 @@ describe("generateScreen", () => {
     };
 
     expect(generateScreen(screen)).toBe(
-      "u8g2.drawFrame(1, 2, 3, 4);\nu8g2.drawLine(5, 6, 7, 8);\nu8g2.setFont(u8g2_font_5x7_tf);\nu8g2.drawStr(9, 10, \"OK\");",
+      "u8g2.drawFrame(1, 2, 3, 4);\nu8g2.drawLine(5, 6, 7, 8);\nu8g2.drawDisc(11, 12, 4, U8G2_DRAW_ALL);\nu8g2.setFont(u8g2_font_5x7_tf);\nu8g2.drawStr(9, 10, \"OK\");",
     );
   });
 });

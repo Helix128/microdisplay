@@ -1,4 +1,4 @@
-export type { DesignElement, LineElement, RectElement, Screen, TextElement } from "./design";
+export type { CircleElement, DesignElement, LineElement, RectElement, Screen, TextElement } from "./design";
 export {
   addElementToScreen,
   addScreen,
@@ -17,5 +17,5 @@ export {
 export type { CreateProjectOptions, DeviceConfig, Project } from "./project";
 export { parseProject, parseProjectJson } from "./projectFile";
 export type { ProjectParseResult } from "./projectFile";
-export { rasterizeLine, rasterizeLineRuns } from "./raster";
-export type { RasterPoint, RasterRun } from "./raster";
+export { rasterizeCirclePoints, rasterizeDiscRuns, rasterizeLine, rasterizeLineRuns } from "./raster";
+export type { RasterColumnRun, RasterPoint, RasterRun } from "./raster";

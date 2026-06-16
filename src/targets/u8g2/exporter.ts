@@ -32,6 +32,10 @@ function generateElement(element: DesignElement): string {
       return element.filled
         ? `u8g2.drawBox(${element.x}, ${element.y}, ${element.width}, ${element.height});`
         : `u8g2.drawFrame(${element.x}, ${element.y}, ${element.width}, ${element.height});`;
+    case "circle":
+      return element.filled
+        ? `u8g2.drawDisc(${element.x}, ${element.y}, ${element.radius}, U8G2_DRAW_ALL);`
+        : `u8g2.drawCircle(${element.x}, ${element.y}, ${element.radius}, U8G2_DRAW_ALL);`;
     case "line":
       return `u8g2.drawLine(${element.x1}, ${element.y1}, ${element.x2}, ${element.y2});`;
     case "text": {

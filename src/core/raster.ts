@@ -9,6 +9,12 @@ export type RasterRun = {
   width: number;
 };
 
+export type RasterColumnRun = {
+  x: number;
+  y: number;
+  height: number;
+};
+
 export function rasterizeLine(x1: number, y1: number, x2: number, y2: number): RasterPoint[] {
   const points: RasterPoint[] = [];
   let tmp: number;
@@ -99,6 +105,125 @@ export function rasterizeLineRuns(x1: number, y1: number, x2: number, y2: number
 
     runs.push(currentRun);
     currentRun = { x: point.x, y: point.y, width: 1 };
+  }
+
+  runs.push(currentRun);
+  return runs;
+}
+
+export function rasterizeCirclePoints(x0: number, y0: number, radius: number): RasterPoint[] {
+  const points = new Map<string, RasterPoint>();
+  let f = 1 - radius;
+  let ddF_x = 1;
+  let ddF_y = -2 * radius;
+  let x = 0;
+  let y = radius;
+
+  addCircleSectionPoints(points, x, y, x0, y0);
+
+  while (x < y) {
+    if (f >= 0) {
+      y--;
+      ddF_y += 2;
+      f += ddF_y;
+    }
+
+    x++;
+    ddF_x += 2;
+    f += ddF_x;
+
+    addCircleSectionPoints(points, x, y, x0, y0);
+  }
+
+  return sortPoints([...points.values()]);
+}
+
+export function rasterizeDiscRuns(x0: number, y0: number, radius: number): RasterColumnRun[] {
+  const points = new Map<string, RasterPoint>();
+  let f = 1 - radius;
+  let ddF_x = 1;
+  let ddF_y = -2 * radius;
+  let x = 0;
+  let y = radius;
+
+  addDiscSectionPoints(points, x, y, x0, y0);
+
+  while (x < y) {
+    if (f >= 0) {
+      y--;
+      ddF_y += 2;
+      f += ddF_y;
+    }
+
+    x++;
+    ddF_x += 2;
+    f += ddF_x;
+
+    addDiscSectionPoints(points, x, y, x0, y0);
+  }
+
+  return compressColumnRuns(sortPoints([...points.values()]));
+}
+
+function addCircleSectionPoints(points: Map<string, RasterPoint>, x: number, y: number, x0: number, y0: number): void {
+  addPoint(points, x0 + x, y0 - y);
+  addPoint(points, x0 + y, y0 - x);
+  addPoint(points, x0 - x, y0 - y);
+  addPoint(points, x0 - y, y0 - x);
+  addPoint(points, x0 + x, y0 + y);
+  addPoint(points, x0 + y, y0 + x);
+  addPoint(points, x0 - x, y0 + y);
+  addPoint(points, x0 - y, y0 + x);
+}
+
+function addDiscSectionPoints(points: Map<string, RasterPoint>, x: number, y: number, x0: number, y0: number): void {
+  addVerticalLinePoints(points, x0 + x, y0 - y, y + 1);
+  addVerticalLinePoints(points, x0 + y, y0 - x, x + 1);
+  addVerticalLinePoints(points, x0 - x, y0 - y, y + 1);
+  addVerticalLinePoints(points, x0 - y, y0 - x, x + 1);
+  addVerticalLinePoints(points, x0 + x, y0, y + 1);
+  addVerticalLinePoints(points, x0 + y, y0, x + 1);
+  addVerticalLinePoints(points, x0 - x, y0, y + 1);
+  addVerticalLinePoints(points, x0 - y, y0, x + 1);
+}
+
+function addVerticalLinePoints(points: Map<string, RasterPoint>, x: number, y: number, height: number): void {
+  for (let offset = 0; offset < height; offset++) {
+    addPoint(points, x, y + offset);
+  }
+}
+
+function addPoint(points: Map<string, RasterPoint>, x: number, y: number): void {
+  points.set(`${x},${y}`, { x, y });
+}
+
+function sortPoints(points: RasterPoint[]): RasterPoint[] {
+  return points.sort((a, b) => a.x - b.x || a.y - b.y);
+}
+
+function compressColumnRuns(points: RasterPoint[]): RasterColumnRun[] {
+  if (points.length === 0) {
+    return [];
+  }
+
+  const runs: RasterColumnRun[] = [];
+  let currentRun = {
+    x: points[0]!.x,
+    y: points[0]!.y,
+    height: 1,
+  };
+
+  for (let index = 1; index < points.length; index++) {
+    const point = points[index]!;
+    const expectedY = currentRun.y + currentRun.height;
+
+    if (point.x === currentRun.x && point.y === expectedY) {
+      currentRun.height++;
+      continue;
+    }
+
+    runs.push(currentRun);
+    currentRun = { x: point.x, y: point.y, height: 1 };
   }
 
   runs.push(currentRun);

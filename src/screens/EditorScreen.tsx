@@ -1,4 +1,5 @@
 import {
+  Circle,
   Download,
   Grid2x2,
   HardDrive,
@@ -30,6 +31,7 @@ import {
   renameScreen,
   reorderScreen,
   setActiveScreen,
+  type CircleElement,
   type DesignElement,
   type LineElement,
   type Project,
@@ -59,7 +61,7 @@ import { projectStorage } from "../platform/projectStorage";
 import { createId } from "../utils/id";
 import { ScreenListPanel } from "./ScreenListPanel";
 
-type Tool = "select" | "pan" | "rect" | "line" | "text";
+type Tool = "select" | "pan" | "rect" | "circle" | "line" | "text";
 
 type CopyStatus = "idle" | "copied";
 type SaveState = "idle" | "saved" | "dirty" | "saving" | "error";
@@ -276,7 +278,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         return;
       }
 
-      if (tool === "rect" || tool === "line" || tool === "text") {
+      if (tool === "rect" || tool === "circle" || tool === "line" || tool === "text") {
         dragStartRef.current = point;
         setDragStart(point);
         setDragCurrent(point);
@@ -296,6 +298,13 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
 
         switch (original.type) {
           case "rect":
+            setDragPreviewElement({
+              ...original,
+              x: original.x + dx,
+              y: original.y + dy,
+            });
+            break;
+          case "circle":
             setDragPreviewElement({
               ...original,
               x: original.x + dx,
@@ -360,6 +369,22 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
             type: "rect",
             filled: rectFilled,
             ...rect,
+          };
+
+          onProjectChange(addElementToScreen(project, project.activeScreenId, element));
+          setSelectedElementId(element.id);
+        }
+      }
+
+      if (tool === "circle") {
+        const circle = createCircleFromPoints(interactionStart, point);
+
+        if (circle.radius > 0) {
+          const element: CircleElement = {
+            id: createId("circle"),
+            type: "circle",
+            filled: rectFilled,
+            ...circle,
           };
 
           onProjectChange(addElementToScreen(project, project.activeScreenId, element));
@@ -756,6 +781,15 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
             <RectangleHorizontal />
           </button>
           <button
+            className={tool === "circle" ? "active" : ""}
+            type="button"
+            aria-label="Círculo"
+            data-tooltip="Círculo"
+            onClick={() => setTool("circle")}
+          >
+            <Circle />
+          </button>
+          <button
             className={tool === "line" ? "active" : ""}
             type="button"
             aria-label="Línea"
@@ -841,13 +875,16 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         onMoveScreen={handleMoveScreen}
       />
 
-      {tool === "rect" ? (
-        <div className="tool-options-panel" aria-label="Opciones de rectángulo">
+      {tool === "rect" || tool === "circle" ? (
+        <div
+          className="tool-options-panel"
+          aria-label={tool === "rect" ? "Opciones de rectángulo" : "Opciones de círculo"}
+        >
           <h2>Opciones</h2>
           <button
             className={rectFilled ? "active" : ""}
             type="button"
-            aria-label="Rectángulos rellenos"
+            aria-label={tool === "rect" ? "Rectángulos rellenos" : "Círculos rellenos"}
             aria-pressed={rectFilled}
             data-tooltip="Relleno"
             onClick={() => setRectFilled((value) => !value)}
@@ -933,6 +970,39 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
                   onChange={(height) =>
                     updateSelectedElement({ ...selectedElement, height })
                   }
+                />
+              </div>
+              <label className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={selectedElement.filled}
+                  onChange={(event) =>
+                    updateSelectedElement({
+                      ...selectedElement,
+                      filled: event.currentTarget.checked,
+                    })
+                  }
+                />
+                Relleno
+              </label>
+            </div>
+          ) : selectedElement.type === "circle" ? (
+            <div className="editor-form">
+              <div className="field-grid">
+                <NumberField
+                  label="X"
+                  value={selectedElement.x}
+                  onChange={(x) => updateSelectedElement({ ...selectedElement, x })}
+                />
+                <NumberField
+                  label="Y"
+                  value={selectedElement.y}
+                  onChange={(y) => updateSelectedElement({ ...selectedElement, y })}
+                />
+                <NumberField
+                  label="Radio"
+                  value={selectedElement.radius}
+                  onChange={(radius) => updateSelectedElement({ ...selectedElement, radius })}
                 />
               </div>
               <label className="checkbox-field">
@@ -1186,6 +1256,8 @@ function getElementLabel(element: DesignElement): string {
   switch (element.type) {
     case "rect":
       return "Rectángulo";
+    case "circle":
+      return "Círculo";
     case "line":
       return "Línea";
     case "text":
@@ -1210,6 +1282,14 @@ function getDraftElement(
       type: "rect",
       filled: rectFilled,
       ...createRectFromPoints(start, current),
+    };
+  }
+
+  if (tool === "circle") {
+    return {
+      type: "circle",
+      filled: rectFilled,
+      ...createCircleFromPoints(start, current),
     };
   }
 
@@ -1245,6 +1325,14 @@ function createRectFromPoints(start: Point, end: Point) {
   };
 }
 
+function createCircleFromPoints(start: Point, end: Point) {
+  return {
+    x: start.x,
+    y: start.y,
+    radius: Math.round(Math.hypot(end.x - start.x, end.y - start.y)),
+  };
+}
+
 function getNextScreenName(project: Project): string {
   let index = project.screens.length + 1;
 
@@ -1273,6 +1361,11 @@ function cloneElementWithNewId(element: DesignElement): DesignElement {
       return {
         ...element,
         id: createId("rect"),
+      };
+    case "circle":
+      return {
+        ...element,
+        id: createId("circle"),
       };
     case "line":
       return {

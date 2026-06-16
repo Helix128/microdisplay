@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { PointerEvent } from "react";
-import type { DesignElement, DeviceConfig, LineElement, RectElement, Screen, TextElement } from "../core";
-import { rasterizeLineRuns } from "../core";
+import type { CircleElement, DesignElement, DeviceConfig, LineElement, RectElement, Screen, TextElement } from "../core";
+import { rasterizeCirclePoints, rasterizeDiscRuns, rasterizeLineRuns } from "../core";
 import { measureBitmapText, rasterizeBitmapText } from "./bitmapText";
 import { getU8g2Font, loadGeneratedU8g2Font } from "../targets/u8g2/fonts/index";
 import "./ScreenPreview.css";
@@ -18,6 +18,13 @@ export type DraftElement =
       y: number;
       width: number;
       height: number;
+      filled: boolean;
+    }
+  | {
+      type: "circle";
+      x: number;
+      y: number;
+      radius: number;
       filled: boolean;
     }
   | {
@@ -131,6 +138,17 @@ export const ScreenPreview = memo(function ScreenPreview({
                 getPoint={getPoint}
               />
             );
+          case "circle":
+            return (
+              <CirclePreview
+                key={renderElement.id}
+                element={renderElement}
+                selected={selected}
+                color={selected ? "#00aaff" : "white"}
+                onElementPointerDown={onElementPointerDown}
+                getPoint={getPoint}
+              />
+            );
           case "line":
             return (
               <LinePreview
@@ -175,6 +193,16 @@ export const ScreenPreview = memo(function ScreenPreview({
             strokeWidth={1}
           />
         )
+      ) : null}
+      {draftElement?.type === "circle" ? (
+        <CirclePreview
+          element={draftElement}
+          selected={false}
+          color="#777"
+          onElementPointerDown={undefined}
+          getPoint={getPoint}
+          interactive={false}
+        />
       ) : null}
       {draftElement?.type === "line" ? (
         <LinePreview element={draftElement} color="#777" onElementPointerDown={undefined} getPoint={getPoint} interactive={false} />
@@ -252,6 +280,68 @@ const RectPreview = memo(function RectPreview({
           strokeWidth={1}
         />
       )}
+    </g>
+  );
+});
+
+type CirclePreviewProps = {
+  element: CircleElement | (DraftElement & { type: "circle" });
+  selected: boolean;
+  color: string;
+  getPoint: (event: PointerEvent<any>) => Point;
+  onElementPointerDown?: (elementId: string, point: Point) => void;
+  interactive?: boolean;
+};
+
+const CirclePreview = memo(function CirclePreview({
+  element,
+  selected,
+  color,
+  getPoint,
+  onElementPointerDown,
+  interactive = true,
+}: CirclePreviewProps) {
+  const outlinePoints = useMemo(
+    () => rasterizeCirclePoints(element.x, element.y, element.radius),
+    [element.radius, element.x, element.y],
+  );
+  const discRuns = useMemo(
+    () => rasterizeDiscRuns(element.x, element.y, element.radius),
+    [element.radius, element.x, element.y],
+  );
+
+  const handlePointerDown =
+    interactive && onElementPointerDown !== undefined
+      ? (event: PointerEvent<SVGElement>) => {
+          event.stopPropagation();
+          const svg = event.currentTarget.closest("svg");
+          if (svg) {
+            svg.setPointerCapture(event.pointerId);
+          }
+          onElementPointerDown((element as CircleElement).id, getPoint(event));
+        }
+      : undefined;
+
+  return (
+    <g onPointerDown={handlePointerDown}>
+      <circle cx={element.x} cy={element.y} r={element.radius + 0.5} fill="transparent" stroke="none" />
+      {element.filled
+        ? discRuns.map((run) => (
+            <rect
+              key={`disc-${run.x},${run.y},${run.height}`}
+              x={run.x}
+              y={run.y}
+              width={1}
+              height={run.height}
+              fill={interactive ? "white" : color}
+            />
+          ))
+        : null}
+      {!element.filled || selected
+        ? outlinePoints.map((point) => (
+            <rect key={`circle-${point.x},${point.y}`} x={point.x} y={point.y} width={1} height={1} fill={color} />
+          ))
+        : null}
     </g>
   );
 });

@@ -1,4 +1,4 @@
-import type { DesignElement, LineElement, RectElement, Screen, TextElement } from "./design";
+import type { CircleElement, DesignElement, LineElement, RectElement, Screen, TextElement } from "./design";
 import type { Project } from "./project";
 
 export type ProjectParseResult =
@@ -118,6 +118,10 @@ function parseElement(value: unknown): DesignElement | null {
     return parseRectElement(value);
   }
 
+  if (value.type === "circle") {
+    return parseCircleElement(value);
+  }
+
   if (value.type === "line") {
     return parseLineElement(value);
   }
@@ -148,6 +152,27 @@ function parseRectElement(value: Record<string, unknown>): RectElement | null {
     y: value.y,
     width: value.width,
     height: value.height,
+    filled: value.filled,
+  };
+}
+
+function parseCircleElement(value: Record<string, unknown>): CircleElement | null {
+  if (
+    typeof value.id !== "string" ||
+    !isValidNumber(value.x) ||
+    !isValidNumber(value.y) ||
+    !isValidNumber(value.radius) ||
+    typeof value.filled !== "boolean"
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    type: "circle",
+    x: value.x,
+    y: value.y,
+    radius: value.radius,
     filled: value.filled,
   };
 }

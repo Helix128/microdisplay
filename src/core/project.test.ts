@@ -340,6 +340,28 @@ describe("project helpers", () => {
     ]);
   });
 
+  it("adds circle elements", () => {
+    const project = addElementToScreen(createProject(), "screen-1", {
+      id: "circle-1",
+      type: "circle",
+      x: 32,
+      y: 24,
+      radius: 10,
+      filled: false,
+    });
+
+    expect(project.screens[0]?.elements).toEqual([
+      {
+        id: "circle-1",
+        type: "circle",
+        x: 32,
+        y: 24,
+        radius: 10,
+        filled: false,
+      },
+    ]);
+  });
+
   it("adds line elements", () => {
     const project = addElementToScreen(createProject(), "screen-1", {
       id: "line-1",
@@ -475,6 +497,43 @@ describe("project helpers", () => {
     });
     expect(nextProject.screens[1]?.elements).toEqual(project.screens[1]?.elements);
   });
+
+  it("updates circle elements", () => {
+    const project = addElementToScreen(createProject(), "screen-1", {
+      id: "circle-1",
+      type: "circle",
+      x: 8,
+      y: 9,
+      radius: 4,
+      filled: false,
+    });
+
+    const nextProject = updateElementInScreen(project, "screen-1", {
+      id: "circle-1",
+      type: "circle",
+      x: 20,
+      y: 21,
+      radius: 12,
+      filled: true,
+    });
+
+    expect(project.screens[0]?.elements[0]).toEqual({
+      id: "circle-1",
+      type: "circle",
+      x: 8,
+      y: 9,
+      radius: 4,
+      filled: false,
+    });
+    expect(nextProject.screens[0]?.elements[0]).toEqual({
+      id: "circle-1",
+      type: "circle",
+      x: 20,
+      y: 21,
+      radius: 12,
+      filled: true,
+    });
+  });
 });
 
 describe("parseProjectJson", () => {
@@ -501,6 +560,21 @@ describe("parseProjectJson", () => {
       y: 12,
       text: "Hello",
       font: "u8g2_font_6x10_tf",
+    });
+
+    const result = parseProjectJson(JSON.stringify(project));
+
+    expect(result).toEqual({ ok: true, project });
+  });
+
+  it("loads circle elements", () => {
+    const project = addElementToScreen(createProject({ name: "Demo" }), "screen-1", {
+      id: "circle-1",
+      type: "circle",
+      x: 16,
+      y: 17,
+      radius: 6,
+      filled: true,
     });
 
     const result = parseProjectJson(JSON.stringify(project));

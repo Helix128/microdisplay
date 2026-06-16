@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rasterizeLine, rasterizeLineRuns } from "./raster";
+import { rasterizeCirclePoints, rasterizeDiscRuns, rasterizeLine, rasterizeLineRuns } from "./raster";
 
 describe("rasterizeLine", () => {
   it("rasterizes a single point", () => {
@@ -64,6 +64,62 @@ describe("rasterizeLine", () => {
       { x: 1, y: 1 },
       { x: 2, y: 2 },
       { x: 3, y: 3 },
+    ]);
+  });
+});
+
+describe("rasterizeCirclePoints", () => {
+  it("rasterizes radius 0 as the center pixel", () => {
+    expect(rasterizeCirclePoints(10, 10, 0)).toEqual([{ x: 10, y: 10 }]);
+  });
+
+  it("rasterizes radius 1 with U8G2 cardinal points", () => {
+    expect(rasterizeCirclePoints(10, 10, 1)).toEqual([
+      { x: 9, y: 10 },
+      { x: 10, y: 9 },
+      { x: 10, y: 11 },
+      { x: 11, y: 10 },
+    ]);
+  });
+
+  it("rasterizes radius 2 with U8G2 midpoint circle pixels", () => {
+    expect(rasterizeCirclePoints(10, 10, 2)).toEqual([
+      { x: 8, y: 9 },
+      { x: 8, y: 10 },
+      { x: 8, y: 11 },
+      { x: 9, y: 8 },
+      { x: 9, y: 12 },
+      { x: 10, y: 8 },
+      { x: 10, y: 12 },
+      { x: 11, y: 8 },
+      { x: 11, y: 12 },
+      { x: 12, y: 9 },
+      { x: 12, y: 10 },
+      { x: 12, y: 11 },
+    ]);
+  });
+});
+
+describe("rasterizeDiscRuns", () => {
+  it("rasterizes radius 0 as one center column", () => {
+    expect(rasterizeDiscRuns(10, 10, 0)).toEqual([{ x: 10, y: 10, height: 1 }]);
+  });
+
+  it("rasterizes radius 1 with U8G2 vertical runs", () => {
+    expect(rasterizeDiscRuns(10, 10, 1)).toEqual([
+      { x: 9, y: 10, height: 1 },
+      { x: 10, y: 9, height: 3 },
+      { x: 11, y: 10, height: 1 },
+    ]);
+  });
+
+  it("rasterizes radius 2 with U8G2 vertical runs", () => {
+    expect(rasterizeDiscRuns(10, 10, 2)).toEqual([
+      { x: 8, y: 9, height: 3 },
+      { x: 9, y: 8, height: 5 },
+      { x: 10, y: 8, height: 5 },
+      { x: 11, y: 8, height: 5 },
+      { x: 12, y: 9, height: 3 },
     ]);
   });
 });
