@@ -1,4 +1,6 @@
-import type { CircleElement, DesignElement, LineElement, RectElement, Screen, TextElement } from "./design";
+import { decodeBitmapBase64, getPackedBitmapByteLength } from "./imageBitmap";
+import { isResizeMode, normalizeDitherMode } from "./imageProcessing";
+import type { CircleElement, DesignElement, ImageElement, LineElement, RectElement, Screen, TextElement } from "./design";
 import type { Project } from "./project";
 
 export type ProjectParseResult =
@@ -130,6 +132,10 @@ function parseElement(value: unknown): DesignElement | null {
     return parseTextElement(value);
   }
 
+  if (value.type === "image") {
+    return parseImageElement(value);
+  }
+
   return null;
 }
 
@@ -220,12 +226,79 @@ function parseTextElement(value: Record<string, unknown>): TextElement | null {
   };
 }
 
+function parseImageElement(value: Record<string, unknown>): ImageElement | null {
+  if (
+    typeof value.id !== "string" ||
+    !isValidNumber(value.x) ||
+    !isValidNumber(value.y) ||
+    !isValidPositiveInteger(value.width) ||
+    !isValidPositiveInteger(value.height) ||
+    typeof value.sourceMimeType !== "string" ||
+    typeof value.sourceData !== "string" ||
+    !isValidPositiveInteger(value.sourceWidth) ||
+    !isValidPositiveInteger(value.sourceHeight) ||
+    !isValidByte(value.threshold) ||
+    (value.brightness !== undefined && !isValidBrightness(value.brightness)) ||
+    typeof value.invert !== "boolean" ||
+    typeof value.ditherMode !== "string" ||
+    normalizeDitherMode(value.ditherMode) === null ||
+    typeof value.resizeMode !== "string" ||
+    !isResizeMode(value.resizeMode) ||
+    (value.cropToScreen !== undefined && typeof value.cropToScreen !== "boolean") ||
+    value.bitmapEncoding !== "xbm-base64" ||
+    typeof value.bitmap !== "string"
+  ) {
+    return null;
+  }
+
+  try {
+    if (decodeBitmapBase64(value.bitmap).length !== getPackedBitmapByteLength(value.width, value.height)) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    type: "image",
+    x: value.x,
+    y: value.y,
+    width: value.width,
+    height: value.height,
+    sourceMimeType: value.sourceMimeType,
+    sourceData: value.sourceData,
+    sourceWidth: value.sourceWidth,
+    sourceHeight: value.sourceHeight,
+    threshold: value.threshold,
+    brightness: value.brightness ?? 0,
+    invert: value.invert,
+    ditherMode: normalizeDitherMode(value.ditherMode)!,
+    resizeMode: value.resizeMode,
+    cropToScreen: value.cropToScreen ?? false,
+    bitmapEncoding: "xbm-base64",
+    bitmap: value.bitmap,
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isValidNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function isValidPositiveInteger(value: unknown): value is number {
+  return Number.isInteger(value) && typeof value === "number" && value > 0;
+}
+
+function isValidByte(value: unknown): value is number {
+  return Number.isInteger(value) && typeof value === "number" && value >= 0 && value <= 255;
+}
+
+function isValidBrightness(value: unknown): value is number {
+  return Number.isInteger(value) && typeof value === "number" && value >= -128 && value <= 128;
 }
 
 function isValidFontName(value: string): boolean {

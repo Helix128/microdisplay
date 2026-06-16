@@ -3,6 +3,7 @@ import {
   Download,
   Grid2x2,
   HardDrive,
+  ImageIcon,
   LogOut,
   MousePointer2,
   Move,
@@ -13,6 +14,7 @@ import {
   Type,
 } from "lucide-react";
 import {
+  type ChangeEvent,
   type PointerEvent,
   type WheelEvent,
   useCallback,
@@ -24,18 +26,27 @@ import {
 import {
   addElementToScreen,
   addScreen,
+  ditherModes,
   duplicateScreen,
+  fitSizeWithin,
   getActiveScreen,
   removeElementFromScreen,
   removeScreen,
   renameScreen,
   reorderScreen,
+  resizeModes,
+  rgbaToXbmBase64,
   setActiveScreen,
+  sizeFromHeight,
+  sizeFromWidth,
   type CircleElement,
   type DesignElement,
+  type DitherMode,
+  type ImageElement,
   type LineElement,
   type Project,
   type RectElement,
+  type ResizeMode,
   type Screen,
   type TextElement,
   updateElementInScreen,
@@ -57,11 +68,12 @@ import {
   type U8g2FontCharset,
   type U8g2FontPurpose,
 } from "../targets/u8g2/fonts/index";
+import { importImageSource, renderImageSourceRgba } from "../platform/browser/imageImport";
 import { projectStorage } from "../platform/projectStorage";
 import { createId } from "../utils/id";
 import { ScreenListPanel } from "./ScreenListPanel";
 
-type Tool = "select" | "pan" | "rect" | "circle" | "line" | "text";
+type Tool = "select" | "pan" | "rect" | "circle" | "line" | "text" | "image";
 
 type CopyStatus = "idle" | "copied";
 type SaveState = "idle" | "saved" | "dirty" | "saving" | "error";
@@ -70,6 +82,7 @@ type SaveMode = "save" | "saveAs";
 const autosaveDelayMs = 1000;
 const minSavingVisibleMs = 450;
 const savedVisibleMs = 1800;
+const imageReprocessDelayMs = 120;
 const u8g2FontFamilies = getU8g2FontFamilies();
 
 type EditorScreenProps = {
@@ -105,6 +118,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const [rectFilled, setRectFilled] = useState(false);
   const [textContent, setTextContent] = useState("Texto");
   const [textFont, setTextFont] = useState(defaultU8g2FontName);
+  const [imageImportError, setImageImportError] = useState<string | null>(null);
   const [dragPreviewElement, setDragPreviewElement] = useState<DesignElement | null>(null);
   const [editingScreenId, setEditingScreenId] = useState<string | null>(null);
   const [editingScreenName, setEditingScreenName] = useState("");
@@ -112,6 +126,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const [lastSavedProjectJson, setLastSavedProjectJson] = useState(() => JSON.stringify(project));
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const artboardRef = useRef<HTMLDivElement>(null);
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
   const dragOriginalElementRef = useRef<DesignElement | null>(null);
   const dragStartRef = useRef<Point | null>(null);
   const viewportOffsetRef = useRef(viewportOffset);
@@ -122,6 +137,8 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const lastSavedProjectJsonRef = useRef(lastSavedProjectJson);
   const saveInFlightRef = useRef(false);
   const saveStatusTimeoutRef = useRef<number | null>(null);
+  const imageReprocessTimeoutRef = useRef<number | null>(null);
+  const imageReprocessVersionRef = useRef(0);
 
   const projectJson = useMemo(() => JSON.stringify(project), [project]);
   const hasUnsavedChanges = projectJson !== lastSavedProjectJson;
@@ -140,6 +157,12 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   useEffect(() => {
     lastSavedProjectJsonRef.current = lastSavedProjectJson;
   }, [lastSavedProjectJson]);
+
+  useEffect(() => () => {
+    if (imageReprocessTimeoutRef.current !== null) {
+      window.clearTimeout(imageReprocessTimeoutRef.current);
+    }
+  }, []);
 
   const activeScreen = useMemo(() => getActiveScreen(project), [project]);
   const selectedElement = useMemo(
@@ -327,6 +350,13 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
               y: original.y + dy,
             });
             break;
+          case "image":
+            setDragPreviewElement({
+              ...original,
+              x: original.x + dx,
+              y: original.y + dy,
+            });
+            break;
         }
         return;
       }
@@ -449,6 +479,122 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
       onProjectChange(updateElementInScreen(project, project.activeScreenId, element));
     },
     [onProjectChange, project],
+  );
+
+  const updateImageElement = useCallback(
+    (element: ImageElement, changes: Partial<Pick<ImageElement, "x" | "y" | "width" | "height" | "threshold" | "brightness" | "invert" | "ditherMode" | "resizeMode" | "cropToScreen">>) => {
+      const nextElement = applyImageChanges(element, changes);
+
+      if (
+        changes.width === undefined &&
+        changes.height === undefined &&
+        changes.threshold === undefined &&
+        changes.brightness === undefined &&
+        changes.invert === undefined &&
+        changes.ditherMode === undefined
+      ) {
+        updateSelectedElement(nextElement);
+        return;
+      }
+
+      updateSelectedElement(nextElement);
+
+      if (imageReprocessTimeoutRef.current !== null) {
+        window.clearTimeout(imageReprocessTimeoutRef.current);
+      }
+
+      const version = imageReprocessVersionRef.current + 1;
+      imageReprocessVersionRef.current = version;
+      imageReprocessTimeoutRef.current = window.setTimeout(() => {
+        imageReprocessTimeoutRef.current = null;
+
+        void renderImageSourceRgba(nextElement, nextElement.width, nextElement.height)
+          .then((rgba) => {
+            if (imageReprocessVersionRef.current !== version) {
+              return;
+            }
+
+            const latestProject = latestProjectRef.current;
+            const latestScreen = getActiveScreen(latestProject);
+            const latestElement = latestScreen.elements.find((element) => element.id === nextElement.id);
+
+            if (latestElement?.type !== "image") {
+              return;
+            }
+
+            onProjectChange(updateElementInScreen(latestProject, latestProject.activeScreenId, {
+              ...latestElement,
+              bitmap: rgbaToXbmBase64(rgba, {
+                threshold: nextElement.threshold,
+                brightness: nextElement.brightness,
+                invert: nextElement.invert,
+                ditherMode: nextElement.ditherMode,
+              }),
+            }));
+          })
+          .catch(() => setImageImportError("No se pudo reprocesar la imagen."));
+      }, imageReprocessDelayMs);
+    },
+    [onProjectChange, updateSelectedElement],
+  );
+
+  const importImageFile = useCallback(
+    (file: File) => {
+      setImageImportError(null);
+
+      void importImageSource(file, {
+        width: Math.min(project.device.width * 4, 512),
+        height: Math.min(project.device.height * 4, 512),
+      })
+        .then(async (source) => {
+          const size = fitSizeWithin(
+            { width: source.sourceWidth, height: source.sourceHeight },
+            { width: Math.max(1, project.device.width * 0.5), height: Math.max(1, project.device.height * 0.5) },
+          );
+          const threshold = 127;
+          const invert = false;
+          const brightness = 0;
+          const ditherMode: DitherMode = "threshold";
+          const resizeMode: ResizeMode = "lock-aspect";
+          const cropToScreen = false;
+          const rgba = await renderImageSourceRgba(source, size.width, size.height);
+          const element: ImageElement = {
+            id: createId("image"),
+            type: "image",
+            x: Math.floor((project.device.width - size.width) / 2),
+            y: Math.floor((project.device.height - size.height) / 2),
+            width: size.width,
+            height: size.height,
+            ...source,
+            threshold,
+            brightness,
+            invert,
+            ditherMode,
+            resizeMode,
+            cropToScreen,
+            bitmapEncoding: "xbm-base64",
+            bitmap: rgbaToXbmBase64(rgba, { threshold, brightness, invert, ditherMode }),
+          };
+
+          onProjectChange(addElementToScreen(project, project.activeScreenId, element));
+          setSelectedElementId(element.id);
+          setTool("select");
+        })
+        .catch(() => setImageImportError("No se pudo importar la imagen."));
+    },
+    [onProjectChange, project],
+  );
+
+  const handleImageFileChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.currentTarget.files?.[0] ?? null;
+      event.currentTarget.value = "";
+
+      if (file !== null) {
+        importImageFile(file);
+      }
+    },
+    [importImageFile],
   );
 
   function removeSelectedElement() {
@@ -808,6 +954,18 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
             <Type />
           </button>
           <button
+            className={tool === "image" ? "active" : ""}
+            type="button"
+            aria-label="Imagen"
+            data-tooltip="Imagen"
+            onClick={() => {
+              setTool("image");
+              imageFileInputRef.current?.click();
+            }}
+          >
+            <ImageIcon />
+          </button>
+          <button
             className={showPixelGrid ? "active" : ""}
             type="button"
             aria-label="Grilla de pixeles"
@@ -859,6 +1017,15 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
           </button>
         </div>
       </div>
+
+      <input
+        ref={imageFileInputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={handleImageFileChange}
+      />
+      {imageImportError !== null ? <div className="tool-options-panel form-error">{imageImportError}</div> : null}
 
       <ScreenListPanel
         project={project}
@@ -1041,6 +1208,88 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
                 value={selectedElement.y2}
                 onChange={(y2) => updateSelectedElement({ ...selectedElement, y2 })}
               />
+            </div>
+          ) : selectedElement.type === "image" ? (
+            <div className="editor-form">
+              <div className="field-grid">
+                <NumberField
+                  label="X"
+                  value={selectedElement.x}
+                  onChange={(x) => updateImageElement(selectedElement, { x })}
+                />
+                <NumberField
+                  label="Y"
+                  value={selectedElement.y}
+                  onChange={(y) => updateImageElement(selectedElement, { y })}
+                />
+                <NumberField
+                  label="Ancho"
+                  value={selectedElement.width}
+                  onChange={(width) => updateImageElement(selectedElement, { width: clampImageSize(width) })}
+                />
+                <NumberField
+                  label="Alto"
+                  value={selectedElement.height}
+                  onChange={(height) => updateImageElement(selectedElement, { height: clampImageSize(height) })}
+                />
+              </div>
+              {selectedElement.ditherMode === "floyd-steinberg" ? (
+                <BrightnessField
+                  value={selectedElement.brightness}
+                  onChange={(brightness) => updateImageElement(selectedElement, { brightness })}
+                />
+              ) : (
+                <ThresholdField
+                  value={selectedElement.threshold}
+                  onChange={(threshold) => updateImageElement(selectedElement, { threshold })}
+                />
+              )}
+              <label>
+                Dithering
+                <select
+                  value={selectedElement.ditherMode}
+                  onChange={(event) => updateImageElement(selectedElement, { ditherMode: event.currentTarget.value as DitherMode })}
+                >
+                  {ditherModes.map((mode) => (
+                    <option key={mode} value={mode}>{getDitherModeLabel(mode)}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Proporción
+                <select
+                  value={selectedElement.resizeMode}
+                  onChange={(event) => updateImageElement(selectedElement, { resizeMode: event.currentTarget.value as ResizeMode })}
+                >
+                  {resizeModes.map((mode) => (
+                    <option key={mode} value={mode}>{getResizeModeLabel(mode)}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={selectedElement.invert}
+                  onChange={(event) => updateImageElement(selectedElement, { invert: event.currentTarget.checked })}
+                />
+                Invertir
+              </label>
+              <label className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={selectedElement.cropToScreen}
+                  onChange={(event) => updateImageElement(selectedElement, { cropToScreen: event.currentTarget.checked })}
+                />
+                Borrar zonas fuera de pantalla al exportar
+              </label>
+              <div className="tool-options-actions">
+                <button type="button" onClick={() => updateImageElement(selectedElement, getCenteredImagePosition(selectedElement, project.device))}>
+                  Centrar
+                </button>
+                <button type="button" onClick={() => updateImageElement(selectedElement, getHalfScreenImageSize(selectedElement, project.device))}>
+                  Ajustar 50%
+                </button>
+              </div>
             </div>
           ) : (
             <div className="editor-form">
@@ -1252,6 +1501,54 @@ function NumberField({
   );
 }
 
+function ThresholdField({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  return (
+    <label>
+      Umbral
+      <div className="threshold-field">
+        <input
+          type="range"
+          min={0}
+          max={255}
+          value={value}
+          onChange={(event) => onChange(clampByte(event.currentTarget.valueAsNumber))}
+        />
+        <input
+          type="number"
+          min={0}
+          max={255}
+          value={value}
+          onChange={(event) => onChange(clampByte(event.currentTarget.valueAsNumber))}
+        />
+      </div>
+    </label>
+  );
+}
+
+function BrightnessField({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  return (
+    <label>
+      Brillo
+      <div className="threshold-field">
+        <input
+          type="range"
+          min={-128}
+          max={128}
+          value={value}
+          onChange={(event) => onChange(clampBrightness(event.currentTarget.valueAsNumber))}
+        />
+        <input
+          type="number"
+          min={-128}
+          max={128}
+          value={value}
+          onChange={(event) => onChange(clampBrightness(event.currentTarget.valueAsNumber))}
+        />
+      </div>
+    </label>
+  );
+}
+
 function getElementLabel(element: DesignElement): string {
   switch (element.type) {
     case "rect":
@@ -1262,6 +1559,8 @@ function getElementLabel(element: DesignElement): string {
       return "Línea";
     case "text":
       return "Texto";
+    case "image":
+      return "Imagen";
   }
 }
 
@@ -1355,6 +1654,30 @@ function getDuplicateScreenName(name: string, project: Project): string {
   return candidate;
 }
 
+function getDitherModeLabel(mode: DitherMode): string {
+  switch (mode) {
+    case "threshold":
+      return "Desactivado";
+    case "ordered":
+      return "Ordenado";
+    case "floyd-steinberg":
+      return "Floyd-Steinberg";
+  }
+}
+
+function getResizeModeLabel(mode: ResizeMode): string {
+  switch (mode) {
+    case "free":
+      return "Libre";
+    case "lock-aspect":
+      return "Conservar proporción";
+    case "lock-aspect-width":
+      return "Alto sigue ancho";
+    case "lock-aspect-height":
+      return "Ancho sigue alto";
+  }
+}
+
 function cloneElementWithNewId(element: DesignElement): DesignElement {
   switch (element.type) {
     case "rect":
@@ -1377,7 +1700,78 @@ function cloneElementWithNewId(element: DesignElement): DesignElement {
         ...element,
         id: createId("text"),
       };
+    case "image":
+      return {
+        ...element,
+        id: createId("image"),
+      };
   }
+}
+
+function applyImageChanges(
+  element: ImageElement,
+  changes: Partial<Pick<ImageElement, "x" | "y" | "width" | "height" | "threshold" | "brightness" | "invert" | "ditherMode" | "resizeMode" | "cropToScreen">>,
+): ImageElement {
+  const nextElement = { ...element, ...changes };
+  const sourceSize = { width: element.sourceWidth, height: element.sourceHeight };
+
+  if (changes.width !== undefined && (nextElement.resizeMode === "lock-aspect" || nextElement.resizeMode === "lock-aspect-width")) {
+    const size = sizeFromWidth(sourceSize, clampImageSize(changes.width));
+    nextElement.width = clampImageSize(size.width);
+    nextElement.height = clampImageSize(size.height);
+  }
+
+  if (changes.height !== undefined && (nextElement.resizeMode === "lock-aspect" || nextElement.resizeMode === "lock-aspect-height")) {
+    const size = sizeFromHeight(sourceSize, clampImageSize(changes.height));
+    nextElement.width = clampImageSize(size.width);
+    nextElement.height = clampImageSize(size.height);
+  }
+
+  return nextElement;
+}
+
+function getCenteredImagePosition(element: ImageElement, device: { width: number; height: number }): Pick<ImageElement, "x" | "y"> {
+  return {
+    x: Math.floor((device.width - element.width) / 2),
+    y: Math.floor((device.height - element.height) / 2),
+  };
+}
+
+function getHalfScreenImageSize(element: ImageElement, device: { width: number; height: number }): Pick<ImageElement, "x" | "y" | "width" | "height"> {
+  const size = fitSizeWithin(
+    { width: element.sourceWidth, height: element.sourceHeight },
+    { width: Math.max(1, device.width * 0.5), height: Math.max(1, device.height * 0.5) },
+  );
+
+  return {
+    ...size,
+    x: Math.floor((device.width - size.width) / 2),
+    y: Math.floor((device.height - size.height) / 2),
+  };
+}
+
+function clampImageSize(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.round(value));
+}
+
+function clampByte(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function clampBrightness(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(-128, Math.min(128, Math.round(value)));
 }
 
 function clampZoom(value: number): number {

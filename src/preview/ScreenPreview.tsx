@@ -1,7 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { PointerEvent } from "react";
-import type { CircleElement, DesignElement, DeviceConfig, LineElement, RectElement, Screen, TextElement } from "../core";
+import type { CircleElement, DesignElement, DeviceConfig, ImageElement, LineElement, RectElement, Screen, TextElement } from "../core";
 import { rasterizeCirclePoints, rasterizeDiscRuns, rasterizeLineRuns } from "../core";
+import { bitmapToDataUrl } from "./bitmapImage";
 import { measureBitmapText, rasterizeBitmapText } from "./bitmapText";
 import { getU8g2Font, loadGeneratedU8g2Font } from "../targets/u8g2/fonts/index";
 import "./ScreenPreview.css";
@@ -40,6 +41,15 @@ export type DraftElement =
       y: number;
       text: string;
       font: string;
+    }
+  | {
+      type: "image";
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      bitmapEncoding: "xbm-base64";
+      bitmap: string;
     };
 
 type ScreenPreviewProps = {
@@ -170,6 +180,17 @@ export const ScreenPreview = memo(function ScreenPreview({
                 getPoint={getPoint}
               />
             );
+          case "image":
+            return (
+              <ImagePreview
+                key={renderElement.id}
+                element={renderElement}
+                selected={selected}
+                color={selected ? "#00aaff" : "white"}
+                onElementPointerDown={onElementPointerDown}
+                getPoint={getPoint}
+              />
+            );
         }
       })}
       {draftElement?.type === "rect" && draftElement.width > 0 && draftElement.height > 0 ? (
@@ -209,6 +230,16 @@ export const ScreenPreview = memo(function ScreenPreview({
       ) : null}
       {draftElement?.type === "text" ? (
         <TextPreview
+          element={draftElement}
+          selected={false}
+          color="#777"
+          onElementPointerDown={undefined}
+          getPoint={getPoint}
+          interactive={false}
+        />
+      ) : null}
+      {draftElement?.type === "image" ? (
+        <ImagePreview
           element={draftElement}
           selected={false}
           color="#777"
@@ -431,6 +462,71 @@ const TextPreview = memo(function TextPreview({
           {element.text}
         </text>
       )}
+    </g>
+  );
+});
+
+type ImagePreviewProps = {
+  element: ImageElement | (DraftElement & { type: "image" });
+  selected: boolean;
+  color: string;
+  getPoint: (event: PointerEvent<any>) => Point;
+  onElementPointerDown?: (elementId: string, point: Point) => void;
+  interactive?: boolean;
+};
+
+const ImagePreview = memo(function ImagePreview({
+  element,
+  selected,
+  color,
+  getPoint,
+  onElementPointerDown,
+  interactive = true,
+}: ImagePreviewProps) {
+  const imageHref = useMemo(() => {
+    try {
+      return bitmapToDataUrl(element.width, element.height, element.bitmap, color);
+    } catch {
+      return "";
+    }
+  }, [color, element.bitmap, element.height, element.width]);
+
+  const handlePointerDown =
+    interactive && onElementPointerDown !== undefined
+      ? (event: PointerEvent<SVGElement>) => {
+          event.stopPropagation();
+          const svg = event.currentTarget.closest("svg");
+          if (svg) {
+            svg.setPointerCapture(event.pointerId);
+          }
+          onElementPointerDown((element as ImageElement).id, getPoint(event));
+        }
+      : undefined;
+
+  return (
+    <g onPointerDown={handlePointerDown}>
+      <rect x={element.x} y={element.y} width={element.width} height={element.height} fill="transparent" stroke="none" />
+      {selected ? (
+        <rect
+          x={element.x - 0.5}
+          y={element.y - 0.5}
+          width={element.width + 1}
+          height={element.height + 1}
+          fill="none"
+          stroke={color}
+          strokeWidth={1}
+        />
+      ) : null}
+      {imageHref !== "" ? (
+        <image
+          x={element.x}
+          y={element.y}
+          width={element.width}
+          height={element.height}
+          href={imageHref}
+          style={{ imageRendering: "pixelated" }}
+        />
+      ) : null}
     </g>
   );
 });

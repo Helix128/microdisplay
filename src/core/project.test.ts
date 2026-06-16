@@ -582,6 +582,111 @@ describe("parseProjectJson", () => {
     expect(result).toEqual({ ok: true, project });
   });
 
+  it("loads image elements", () => {
+    const project = addElementToScreen(createProject({ name: "Demo" }), "screen-1", {
+      id: "image-1",
+      type: "image",
+      x: 2,
+      y: 3,
+      width: 8,
+      height: 1,
+      sourceMimeType: "image/png",
+      sourceData: "source",
+      sourceWidth: 8,
+      sourceHeight: 1,
+      threshold: 127,
+      brightness: 0,
+      invert: false,
+      ditherMode: "threshold",
+      resizeMode: "lock-aspect",
+      cropToScreen: false,
+      bitmapEncoding: "xbm-base64",
+      bitmap: "AQ==",
+    });
+
+    const result = parseProjectJson(JSON.stringify(project));
+
+    expect(result).toEqual({ ok: true, project });
+  });
+
+  it("rejects image elements with invalid dither mode", () => {
+    const project = createProject();
+
+    const result = parseProjectJson(
+      JSON.stringify({
+        ...project,
+        screens: [
+          {
+            ...project.screens[0],
+            elements: [
+              {
+                id: "image-1",
+                type: "image",
+                x: 0,
+                y: 0,
+                width: 8,
+                height: 1,
+                sourceMimeType: "image/png",
+                sourceData: "source",
+                sourceWidth: 8,
+                sourceHeight: 1,
+                threshold: 127,
+                brightness: 0,
+                invert: false,
+                ditherMode: "unknown",
+                resizeMode: "lock-aspect",
+                cropToScreen: false,
+                bitmapEncoding: "xbm-base64",
+                bitmap: "AQ==",
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects image elements with invalid bitmap length", () => {
+    const project = createProject();
+
+    const result = parseProjectJson(
+      JSON.stringify({
+        ...project,
+        screens: [
+          {
+            ...project.screens[0],
+            elements: [
+              {
+                id: "image-1",
+                type: "image",
+                x: 0,
+                y: 0,
+                width: 16,
+                height: 1,
+                sourceMimeType: "image/png",
+                sourceData: "source",
+                sourceWidth: 16,
+                sourceHeight: 1,
+                threshold: 127,
+                brightness: 0,
+                invert: false,
+                ditherMode: "threshold",
+                resizeMode: "lock-aspect",
+                cropToScreen: false,
+                bitmapEncoding: "xbm-base64",
+                bitmap: "AQ==",
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+  });
+
   it("rejects invalid JSON", () => {
     const result = parseProjectJson("{");
 

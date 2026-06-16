@@ -4,7 +4,7 @@ export type Screen = {
   elements: DesignElement[];
 };
 
-export type DesignElement = RectElement | CircleElement | LineElement | TextElement;
+export type DesignElement = RectElement | CircleElement | LineElement | TextElement | ImageElement;
 
 export type RectElement = {
   id: string;
@@ -41,4 +41,25 @@ export type TextElement = {
   y: number;
   text: string;
   font: string;
+};
+
+export type ImageElement = {
+  id: string;
+  type: "image";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  sourceMimeType: string;
+  sourceData: string;
+  sourceWidth: number;
+  sourceHeight: number;
+  threshold: number;
+  brightness: number;
+  invert: boolean;
+  ditherMode: "threshold" | "ordered" | "floyd-steinberg";
+  resizeMode: "free" | "lock-aspect" | "lock-aspect-width" | "lock-aspect-height";
+  cropToScreen: boolean;
+  bitmapEncoding: "xbm-base64";
+  bitmap: string;
 };

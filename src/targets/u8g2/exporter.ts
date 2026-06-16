@@ -1,7 +1,9 @@
-import type { DesignElement, Project, Screen } from "../../core";
+import { cropBitmap, decodeXbmBase64Bitmap } from "../../core";
+import type { DesignElement, DeviceConfig, Project, Screen } from "../../core";
 
 export function generateScreen(screen: Screen): string {
-  return screen.elements.map(generateElement).join("\n");
+  const context: GenerateContext = { usedBitmapNames: new Set<string>() };
+  return screen.elements.map((element) => generateElement(element, context)).join("\n");
 }
 
 export function generateProject(project: Project): string {
@@ -10,7 +12,8 @@ export function generateProject(project: Project): string {
   return project.screens
     .map((screen) => {
       const functionName = toFunctionName(screen.name, usedNames);
-      const body = generateScreen(screen);
+      const context: GenerateContext = { usedBitmapNames: new Set<string>(), device: project.device };
+      const body = screen.elements.map((element) => generateElement(element, context)).join("\n");
 
       if (!body) {
         return `void ${functionName}() {\n}`;
@@ -26,7 +29,12 @@ export function generateProject(project: Project): string {
     .join("\n\n");
 }
 
-function generateElement(element: DesignElement): string {
+type GenerateContext = {
+  usedBitmapNames: Set<string>;
+  device?: DeviceConfig;
+};
+
+function generateElement(element: DesignElement, context: GenerateContext): string {
   switch (element.type) {
     case "rect":
       return element.filled
@@ -46,6 +54,21 @@ function generateElement(element: DesignElement): string {
         `u8g2.${drawFunction}(${element.x}, ${element.y}, "${escapeCppString(element.text)}");`,
       ].join("\n");
     }
+    case "image": {
+      const bitmapName = toBitmapName(element.id, context.usedBitmapNames);
+      const exportedImage = getExportedImage(element, context.device);
+
+      if (exportedImage === null) {
+        return "";
+      }
+
+      return [
+        `static const unsigned char ${bitmapName}[] PROGMEM = {`,
+        `  ${formatBytes(exportedImage.bytes)}`,
+        `};`,
+        `u8g2.drawXBMP(${exportedImage.x}, ${exportedImage.y}, ${exportedImage.width}, ${exportedImage.height}, ${bitmapName});`,
+      ].join("\n");
+    }
   }
 }
 
@@ -60,6 +83,64 @@ function escapeCppString(value: string): string {
     .replace(/\n/g, "\\n")
     .replace(/\r/g, "\\r")
     .replace(/\t/g, "\\t");
+}
+
+function formatBytes(bytes: Uint8Array): string {
+  return [...bytes]
+    .map((byte) => `0x${byte.toString(16).padStart(2, "0")}`)
+    .join(", ");
+}
+
+function getExportedImage(
+  element: Extract<DesignElement, { type: "image" }>,
+  device: DeviceConfig | undefined,
+): { x: number; y: number; width: number; height: number; bytes: Uint8Array } | null {
+  if (!element.cropToScreen || device === undefined) {
+    return {
+      x: element.x,
+      y: element.y,
+      width: element.width,
+      height: element.height,
+      bytes: decodeXbmBase64Bitmap(element.width, element.height, element.bitmap).data,
+    };
+  }
+
+  const visibleX = Math.max(0, element.x);
+  const visibleY = Math.max(0, element.y);
+  const visibleRight = Math.min(device.width, element.x + element.width);
+  const visibleBottom = Math.min(device.height, element.y + element.height);
+  const visibleWidth = visibleRight - visibleX;
+  const visibleHeight = visibleBottom - visibleY;
+
+  if (visibleWidth <= 0 || visibleHeight <= 0) {
+    return null;
+  }
+
+  const bitmap = decodeXbmBase64Bitmap(element.width, element.height, element.bitmap);
+  const cropped = cropBitmap(bitmap, visibleX - element.x, visibleY - element.y, visibleWidth, visibleHeight);
+
+  return {
+    x: visibleX,
+    y: visibleY,
+    width: visibleWidth,
+    height: visibleHeight,
+    bytes: cropped.data,
+  };
+}
+
+function toBitmapName(id: string, usedNames: Set<string>): string {
+  const safeId = id.replace(/[^a-zA-Z0-9_]+/g, "_").replace(/^([0-9])/, "_$1") || "image";
+  const base = `image_${safeId}`;
+  let candidate = base;
+  let suffix = 2;
+
+  while (usedNames.has(candidate)) {
+    candidate = `${base}_${suffix}`;
+    suffix++;
+  }
+
+  usedNames.add(candidate);
+  return candidate;
 }
 
 function toFunctionName(name: string, usedNames: Set<string>): string {

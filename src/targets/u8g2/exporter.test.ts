@@ -100,6 +100,33 @@ const screenWithText: Screen = {
   ],
 };
 
+const screenWithImage: Screen = {
+  id: "screen-1",
+  name: "Main Screen",
+  elements: [
+    {
+      id: "logo-1",
+      type: "image",
+      x: 2,
+      y: 3,
+      width: 16,
+      height: 1,
+      sourceMimeType: "image/png",
+      sourceData: "source",
+      sourceWidth: 16,
+      sourceHeight: 1,
+      threshold: 127,
+      brightness: 0,
+      invert: false,
+      ditherMode: "threshold",
+      resizeMode: "lock-aspect",
+      cropToScreen: false,
+      bitmapEncoding: "xbm-base64",
+      bitmap: "AD8=",
+    },
+  ],
+};
+
 describe("generateScreen", () => {
   it("returns empty string for empty screen", () => {
     expect(generateScreen(emptyScreen)).toBe("");
@@ -139,6 +166,49 @@ describe("generateScreen", () => {
     expect(generateScreen(screenWithText)).toBe(
       "u8g2.setFont(u8g2_font_6x10_tf);\nu8g2.drawStr(4, 12, \"Hello\");",
     );
+  });
+
+  it("generates PROGMEM bitmap and drawXBMP for image", () => {
+    expect(generateScreen(screenWithImage)).toBe(
+      "static const unsigned char image_logo_1[] PROGMEM = {\n  0x00, 0x3f\n};\nu8g2.drawXBMP(2, 3, 16, 1, image_logo_1);",
+    );
+  });
+
+  it("crops image export to visible screen area when enabled", () => {
+    const project: Project = {
+      schemaVersion: 1,
+      name: "Demo",
+      device: { width: 8, height: 1 },
+      activeScreenId: "screen-1",
+      screens: [
+        {
+          id: "screen-1",
+          name: "Main Screen",
+          elements: [
+            {
+              ...(screenWithImage.elements[0]! as Extract<Screen["elements"][number], { type: "image" }>),
+              x: -8,
+              y: 0,
+              cropToScreen: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(generateProject(project)).toContain(
+      "static const unsigned char image_logo_1[] PROGMEM = {\n    0x3f\n  };\n  u8g2.drawXBMP(0, 0, 8, 1, image_logo_1);",
+    );
+  });
+
+  it("uses unique bitmap names", () => {
+    const screen: Screen = {
+      id: "screen-1",
+      name: "Main Screen",
+      elements: [screenWithImage.elements[0]!, screenWithImage.elements[0]!],
+    };
+
+    expect(generateScreen(screen)).toContain("image_logo_1_2");
   });
 
   it("uses drawUTF8 for text with non-ASCII characters (unicode codepoints >= 128)", () => {
