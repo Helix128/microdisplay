@@ -36,11 +36,11 @@ export const tauriProjectStorage: ProjectStorage = {
   },
 
   async saveProject(project) {
-    await saveProjectToCurrentPath(project);
+    return saveProjectToCurrentPath(project);
   },
 
   async saveProjectAs(project) {
-    await saveProjectWithDialog(project);
+    return saveProjectWithDialog(project);
   },
 
   async getLastProject() {
@@ -110,20 +110,20 @@ async function readProjectFile(path: string): Promise<Project> {
   return result.project;
 }
 
-async function saveProjectToCurrentPath(project: Project) {
+async function saveProjectToCurrentPath(project: Project): Promise<boolean> {
   if (currentProjectPath !== null) {
     try {
       await writeProjectFile(currentProjectPath, project);
-      return;
+      return true;
     } catch {
       forgetProjectPath();
     }
   }
 
-  await saveProjectWithDialog(project);
+  return saveProjectWithDialog(project);
 }
 
-async function saveProjectWithDialog(project: Project) {
+async function saveProjectWithDialog(project: Project): Promise<boolean> {
   const path = await save({
     title: "Guardar proyecto",
     defaultPath: await getDefaultProjectPath(project),
@@ -131,11 +131,12 @@ async function saveProjectWithDialog(project: Project) {
   });
 
   if (path === null) {
-    return;
+    return false;
   }
 
   await writeProjectFile(path, project);
   rememberProjectPath(path);
+  return true;
 }
 
 async function writeProjectFile(path: string, project: Project) {

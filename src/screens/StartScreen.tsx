@@ -1,6 +1,6 @@
 import { type FormEvent, memo, useCallback, useEffect, useState } from "react";
 import { MoreVertical, Trash2 } from "lucide-react";
-import { createProject, getActiveScreen, type Project } from "../core";
+import { createProject, getFirstScreen, setFirstScreenActive, type Project } from "../core";
 import { ScreenPreview } from "../preview/ScreenPreview";
 import { projectStorage, type StoredProject } from "../platform/projectStorage";
 import { createId } from "../utils/id";
@@ -76,7 +76,7 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
       });
 
       await projectStorage.createProject(project);
-      onCreateProject(project);
+      onCreateProject(setFirstScreenActive(project));
     } catch (currentError) {
       setError(
         currentError instanceof Error
@@ -94,7 +94,7 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
         const project = await projectStorage.openStoredProject(projectId);
 
         if (project !== null) {
-          onCreateProject(project);
+          onCreateProject(setFirstScreenActive(project));
         }
       } catch (currentError) {
         setError(
@@ -139,7 +139,7 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
       const project = await projectStorage.openProject();
 
       if (project !== null) {
-        onCreateProject(project);
+        onCreateProject(setFirstScreenActive(project));
       }
     } catch (currentError) {
       setError(
@@ -286,7 +286,7 @@ const ProjectCard = memo(function ProjectCard({
   onToggleMenu: (projectId: string) => void;
   onDelete: (projectId: string, projectName: string) => void;
 }) {
-  const activeScreen = getActiveScreen(storedProject.project);
+  const firstScreen = getFirstScreen(storedProject.project);
 
   return (
     <article
@@ -304,7 +304,7 @@ const ProjectCard = memo(function ProjectCard({
       <div className="project-card-preview">
         <ScreenPreview
           device={storedProject.project.device}
-          screen={activeScreen}
+          screen={firstScreen}
           selectedElementId={null}
           draftElement={null}
         />
@@ -314,7 +314,6 @@ const ProjectCard = memo(function ProjectCard({
         <div className="project-card-head">
           <div className="project-card-title-group">
             <strong>{storedProject.project.name}</strong>
-            <p className="project-card-subtitle">Activa: {activeScreen.name}</p>
           </div>
           <div className="project-card-menu-container">
             <button

@@ -3,9 +3,15 @@ export {
   addElementToScreen,
   addScreen,
   createProject,
+  duplicateScreen,
   getActiveScreen,
+  getFirstScreen,
   removeElementFromScreen,
+  removeScreen,
+  renameScreen,
+  reorderScreen,
   setActiveScreen,
+  setFirstScreenActive,
   updateElementInScreen,
 } from "./project";
 export type { CreateProjectOptions, DeviceConfig, Project } from "./project";

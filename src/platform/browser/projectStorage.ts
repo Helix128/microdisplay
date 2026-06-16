@@ -37,11 +37,13 @@ export const browserProjectStorage: ProjectStorage = {
     const id = getCurrentProjectId() ?? createId("project");
     rememberProjectId(id);
     saveStoredProject(id, project);
+    return true;
   },
 
   async saveProjectAs(project) {
     await this.saveProject(project);
     downloadProject(project);
+    return true;
   },
 
   async getLastProject() {

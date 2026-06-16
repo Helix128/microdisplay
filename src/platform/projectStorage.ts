@@ -10,8 +10,8 @@ export type StoredProject = {
 export type ProjectStorage = {
   createProject(project: Project): Promise<void>;
   openProject(): Promise<Project | null>;
-  saveProject(project: Project): Promise<void>;
-  saveProjectAs(project: Project): Promise<void>;
+  saveProject(project: Project): Promise<boolean>;
+  saveProjectAs(project: Project): Promise<boolean>;
   getLastProject(): Promise<Project | null>;
   listProjects(): Promise<StoredProject[]>;
   openStoredProject(id: string): Promise<Project | null>;

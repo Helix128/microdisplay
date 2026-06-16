@@ -3,9 +3,15 @@ import {
   addElementToScreen,
   addScreen,
   createProject,
+  duplicateScreen,
   getActiveScreen,
+  getFirstScreen,
   removeElementFromScreen,
+  removeScreen,
+  renameScreen,
+  reorderScreen,
   setActiveScreen,
+  setFirstScreenActive,
   updateElementInScreen,
 } from "./project";
 import { parseProjectJson } from "./projectFile";
@@ -69,6 +75,33 @@ describe("project helpers", () => {
     });
   });
 
+  it("gets the first screen", () => {
+    const project = addScreen(createProject(), {
+      id: "screen-2",
+      name: "Settings",
+      elements: [],
+    });
+
+    expect(getFirstScreen(project)).toEqual({
+      id: "screen-1",
+      name: "Screen 1",
+      elements: [],
+    });
+  });
+
+  it("sets the first screen as active", () => {
+    const project = setActiveScreen(
+      addScreen(createProject(), {
+        id: "screen-2",
+        name: "Settings",
+        elements: [],
+      }),
+      "screen-2",
+    );
+
+    expect(setFirstScreenActive(project).activeScreenId).toBe("screen-1");
+  });
+
   it("adds a screen without mutating the original project", () => {
     const project = createProject();
     const nextProject = addScreen(project, {
@@ -91,6 +124,176 @@ describe("project helpers", () => {
       },
     ]);
     expect(nextProject.activeScreenId).toBe("screen-1");
+  });
+
+  it("renames a screen without mutating the original project", () => {
+    const project = addScreen(createProject(), {
+      id: "screen-2",
+      name: "Settings",
+      elements: [],
+    });
+
+    const nextProject = renameScreen(project, "screen-2", "Menu");
+
+    expect(project.screens[1]?.name).toBe("Settings");
+    expect(nextProject.screens[1]?.name).toBe("Menu");
+  });
+
+  it("duplicates a screen after the source screen", () => {
+    const project = addScreen(
+      addElementToScreen(createProject(), "screen-1", {
+        id: "rect-1",
+        type: "rect",
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+        filled: false,
+      }),
+      {
+        id: "screen-2",
+        name: "Settings",
+        elements: [],
+      },
+    );
+
+    const nextProject = duplicateScreen(project, "screen-1", {
+      id: "screen-3",
+      name: "Screen 1 copia",
+      elements: [
+        {
+          id: "rect-2",
+          type: "rect",
+          x: 0,
+          y: 0,
+          width: 10,
+          height: 10,
+          filled: false,
+        },
+      ],
+    });
+
+    expect(nextProject.screens.map((screen) => screen.id)).toEqual([
+      "screen-1",
+      "screen-3",
+      "screen-2",
+    ]);
+    expect(nextProject.screens[1]?.elements[0]?.id).toBe("rect-2");
+  });
+
+  it("removes a non-active screen without mutating the original project", () => {
+    const project = addScreen(createProject(), {
+      id: "screen-2",
+      name: "Settings",
+      elements: [],
+    });
+
+    const nextProject = removeScreen(project, "screen-2");
+
+    expect(project.screens).toHaveLength(2);
+    expect(nextProject.screens).toHaveLength(1);
+    expect(nextProject.activeScreenId).toBe("screen-1");
+  });
+
+  it("removes active screen and selects nearest remaining screen", () => {
+    const project = setActiveScreen(
+      addScreen(
+        addScreen(createProject(), {
+          id: "screen-2",
+          name: "Settings",
+          elements: [],
+        }),
+        {
+          id: "screen-3",
+          name: "About",
+          elements: [],
+        },
+      ),
+      "screen-2",
+    );
+
+    const nextProject = removeScreen(project, "screen-2");
+
+    expect(nextProject.screens.map((screen) => screen.id)).toEqual([
+      "screen-1",
+      "screen-3",
+    ]);
+    expect(nextProject.activeScreenId).toBe("screen-3");
+  });
+
+  it("does not remove the only screen", () => {
+    const project = createProject();
+
+    expect(removeScreen(project, "screen-1")).toEqual(project);
+  });
+
+  it("reorders a screen to a target index", () => {
+    const project = addScreen(
+      addScreen(createProject(), {
+        id: "screen-2",
+        name: "Settings",
+        elements: [],
+      }),
+      {
+        id: "screen-3",
+        name: "About",
+        elements: [],
+      },
+    );
+
+    const nextProject = reorderScreen(project, "screen-3", 0);
+
+    expect(project.screens.map((screen) => screen.id)).toEqual([
+      "screen-1",
+      "screen-2",
+      "screen-3",
+    ]);
+    expect(nextProject.screens.map((screen) => screen.id)).toEqual([
+      "screen-3",
+      "screen-1",
+      "screen-2",
+    ]);
+  });
+
+  it("keeps active screen when reordering", () => {
+    const project = setActiveScreen(
+      addScreen(
+        addScreen(createProject(), {
+          id: "screen-2",
+          name: "Settings",
+          elements: [],
+        }),
+        {
+          id: "screen-3",
+          name: "About",
+          elements: [],
+        },
+      ),
+      "screen-2",
+    );
+
+    const nextProject = reorderScreen(project, "screen-2", 2);
+
+    expect(nextProject.activeScreenId).toBe("screen-2");
+    expect(nextProject.screens.map((screen) => screen.id)).toEqual([
+      "screen-1",
+      "screen-3",
+      "screen-2",
+    ]);
+  });
+
+  it("clamps reorder target index", () => {
+    const project = addScreen(createProject(), {
+      id: "screen-2",
+      name: "Settings",
+      elements: [],
+    });
+
+    const movedToStart = reorderScreen(project, "screen-2", -10);
+    const movedToEnd = reorderScreen(project, "screen-1", 99);
+
+    expect(movedToStart.screens.map((screen) => screen.id)).toEqual(["screen-2", "screen-1"]);
+    expect(movedToEnd.screens.map((screen) => screen.id)).toEqual(["screen-2", "screen-1"]);
   });
 
   it("sets the active screen", () => {

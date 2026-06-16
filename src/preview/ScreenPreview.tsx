@@ -26,6 +26,13 @@ export type DraftElement =
       y1: number;
       x2: number;
       y2: number;
+    }
+  | {
+      type: "text";
+      x: number;
+      y: number;
+      text: string;
+      font: string;
     };
 
 type ScreenPreviewProps = {
@@ -172,6 +179,16 @@ export const ScreenPreview = memo(function ScreenPreview({
       {draftElement?.type === "line" ? (
         <LinePreview element={draftElement} color="#777" onElementPointerDown={undefined} getPoint={getPoint} interactive={false} />
       ) : null}
+      {draftElement?.type === "text" ? (
+        <TextPreview
+          element={draftElement}
+          selected={false}
+          color="#777"
+          onElementPointerDown={undefined}
+          getPoint={getPoint}
+          interactive={false}
+        />
+      ) : null}
     </svg>
   );
 });
@@ -240,11 +257,12 @@ const RectPreview = memo(function RectPreview({
 });
 
 type TextPreviewProps = {
-  element: TextElement;
+  element: TextElement | (DraftElement & { type: "text" });
   selected: boolean;
   color: string;
   getPoint: (event: PointerEvent<any>) => Point;
   onElementPointerDown?: (elementId: string, point: Point) => void;
+  interactive?: boolean;
 };
 
 const TextPreview = memo(function TextPreview({
@@ -253,6 +271,7 @@ const TextPreview = memo(function TextPreview({
   color,
   getPoint,
   onElementPointerDown,
+  interactive = true,
 }: TextPreviewProps) {
   const [generatedFont, setGeneratedFont] = useState<Awaited<ReturnType<typeof loadGeneratedU8g2Font>>>(null);
   const fallbackFont = getU8g2Font(element.font);
@@ -281,16 +300,16 @@ const TextPreview = memo(function TextPreview({
   const top = bitmapMetrics === null ? element.y - fallbackFont.baseline : element.y + bitmapMetrics.top;
 
   const handlePointerDown =
-    onElementPointerDown === undefined
-      ? undefined
-      : (event: PointerEvent<SVGElement>) => {
+    interactive && onElementPointerDown !== undefined
+      ? (event: PointerEvent<SVGElement>) => {
           event.stopPropagation();
           const svg = event.currentTarget.closest("svg");
           if (svg) {
             svg.setPointerCapture(event.pointerId);
           }
-          onElementPointerDown(element.id, getPoint(event));
-        };
+          onElementPointerDown((element as TextElement).id, getPoint(event));
+        }
+      : undefined;
 
   return (
     <g onPointerDown={handlePointerDown}>

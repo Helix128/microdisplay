@@ -1,14 +1,14 @@
 import {
-  HardDrive,
-  SaveAll,
   Download,
+  Grid2x2,
+  HardDrive,
   LogOut,
   MousePointer2,
   Move,
   PaintBucket,
-  Slash,
   RectangleHorizontal,
-  Grid2x2,
+  SaveAll,
+  Slash,
   Type,
 } from "lucide-react";
 import {
@@ -22,12 +22,19 @@ import {
 } from "react";
 import {
   addElementToScreen,
+  addScreen,
+  duplicateScreen,
   getActiveScreen,
   removeElementFromScreen,
+  removeScreen,
+  renameScreen,
+  reorderScreen,
+  setActiveScreen,
   type DesignElement,
   type LineElement,
   type Project,
   type RectElement,
+  type Screen,
   type TextElement,
   updateElementInScreen,
 } from "../core";
@@ -50,11 +57,17 @@ import {
 } from "../targets/u8g2/fonts/index";
 import { projectStorage } from "../platform/projectStorage";
 import { createId } from "../utils/id";
+import { ScreenListPanel } from "./ScreenListPanel";
 
 type Tool = "select" | "pan" | "rect" | "line" | "text";
 
 type CopyStatus = "idle" | "copied";
+type SaveState = "idle" | "saved" | "dirty" | "saving" | "error";
+type SaveMode = "save" | "saveAs";
 
+const autosaveDelayMs = 1000;
+const minSavingVisibleMs = 450;
+const savedVisibleMs = 1800;
 const u8g2FontFamilies = getU8g2FontFamilies();
 
 type EditorScreenProps = {
@@ -91,15 +104,40 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const [textContent, setTextContent] = useState("Texto");
   const [textFont, setTextFont] = useState(defaultU8g2FontName);
   const [dragPreviewElement, setDragPreviewElement] = useState<DesignElement | null>(null);
+  const [editingScreenId, setEditingScreenId] = useState<string | null>(null);
+  const [editingScreenName, setEditingScreenName] = useState("");
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [lastSavedProjectJson, setLastSavedProjectJson] = useState(() => JSON.stringify(project));
+  const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const artboardRef = useRef<HTMLDivElement>(null);
   const dragOriginalElementRef = useRef<DesignElement | null>(null);
+  const dragStartRef = useRef<Point | null>(null);
   const viewportOffsetRef = useRef(viewportOffset);
   const panFrameRef = useRef<number | null>(null);
   const pendingViewportOffsetRef = useRef<Point | null>(null);
+  const latestProjectRef = useRef(project);
+  const latestProjectJsonRef = useRef(JSON.stringify(project));
+  const lastSavedProjectJsonRef = useRef(lastSavedProjectJson);
+  const saveInFlightRef = useRef(false);
+  const saveStatusTimeoutRef = useRef<number | null>(null);
+
+  const projectJson = useMemo(() => JSON.stringify(project), [project]);
+  const hasUnsavedChanges = projectJson !== lastSavedProjectJson;
+  const isSaving = saveState === "saving";
+  const statusMessage = getSaveStatusMessage(saveState, hasUnsavedChanges);
 
   useEffect(() => {
     viewportOffsetRef.current = viewportOffset;
   }, [viewportOffset]);
+
+  useEffect(() => {
+    latestProjectRef.current = project;
+    latestProjectJsonRef.current = projectJson;
+  }, [project, projectJson]);
+
+  useEffect(() => {
+    lastSavedProjectJsonRef.current = lastSavedProjectJson;
+  }, [lastSavedProjectJson]);
 
   const activeScreen = useMemo(() => getActiveScreen(project), [project]);
   const selectedElement = useMemo(
@@ -107,12 +145,126 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
     [activeScreen, selectedElementId],
   );
   const draftElement = useMemo(
-    () => getDraftElement(tool, dragStart, dragCurrent, rectFilled),
-    [tool, dragStart, dragCurrent, rectFilled],
+    () => getDraftElement(tool, dragStart, dragCurrent, rectFilled, textContent, textFont),
+    [tool, dragStart, dragCurrent, rectFilled, textContent, textFont],
   );
   const exportCode = useMemo(
     () => (showExportPanel ? u8g2.generateProject(project) : ""),
     [project, showExportPanel],
+  );
+
+  const resetEditorInteractionState = useCallback(() => {
+    setSelectedElementId(null);
+    setDragStart(null);
+    setDragCurrent(null);
+    setDragPreviewElement(null);
+    dragOriginalElementRef.current = null;
+    dragStartRef.current = null;
+  }, []);
+
+  const handleSelectScreen = useCallback(
+    (screenId: string) => {
+      if (screenId === project.activeScreenId) {
+        return;
+      }
+
+      resetEditorInteractionState();
+      setEditingScreenId(null);
+      setEditingScreenName("");
+      onProjectChange(setActiveScreen(project, screenId));
+    },
+    [onProjectChange, project, resetEditorInteractionState],
+  );
+
+  const handleAddScreen = useCallback(() => {
+    const screen: Screen = {
+      id: createId("screen"),
+      name: getNextScreenName(project),
+      elements: [],
+    };
+
+    const nextProject = setActiveScreen(addScreen(project, screen), screen.id);
+    resetEditorInteractionState();
+    setEditingScreenId(screen.id);
+    setEditingScreenName(screen.name);
+    onProjectChange(nextProject);
+  }, [onProjectChange, project, resetEditorInteractionState]);
+
+  const handleStartRenameScreen = useCallback((screen: Screen) => {
+    setEditingScreenId(screen.id);
+    setEditingScreenName(screen.name);
+  }, []);
+
+  const handleCommitRenameScreen = useCallback(
+    (screen: Screen) => {
+      const name = editingScreenName.trim();
+      const nextName = name || screen.name;
+
+      if (nextName !== screen.name) {
+        onProjectChange(renameScreen(project, screen.id, nextName));
+      }
+
+      setEditingScreenId(null);
+      setEditingScreenName("");
+    },
+    [editingScreenName, onProjectChange, project],
+  );
+
+  const handleCancelRenameScreen = useCallback(() => {
+    setEditingScreenId(null);
+    setEditingScreenName("");
+  }, []);
+
+  const handleDuplicateScreen = useCallback(
+    (screen: Screen) => {
+      const duplicatedScreen: Screen = {
+        id: createId("screen"),
+        name: getDuplicateScreenName(screen.name, project),
+        elements: screen.elements.map(cloneElementWithNewId),
+      };
+
+      const nextProject = setActiveScreen(
+        duplicateScreen(project, screen.id, duplicatedScreen),
+        duplicatedScreen.id,
+      );
+
+      resetEditorInteractionState();
+      setEditingScreenId(null);
+      setEditingScreenName("");
+      onProjectChange(nextProject);
+    },
+    [onProjectChange, project, resetEditorInteractionState],
+  );
+
+  const handleRemoveScreen = useCallback(
+    (screen: Screen) => {
+      if (project.screens.length <= 1) {
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `¿Estás seguro de que deseas eliminar la pantalla "${screen.name}"?`,
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      resetEditorInteractionState();
+      setEditingScreenId(null);
+      setEditingScreenName("");
+      onProjectChange(removeScreen(project, screen.id));
+    },
+    [onProjectChange, project, resetEditorInteractionState],
+  );
+
+  const handleMoveScreen = useCallback(
+    (screenId: string, targetIndex: number) => {
+      setEditingScreenId(null);
+      setEditingScreenName("");
+      onProjectChange(reorderScreen(project, screenId, targetIndex));
+    },
+    [onProjectChange, project],
   );
 
   const handlePreviewPointerDown = useCallback(
@@ -124,34 +276,22 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         return;
       }
 
-      if (tool === "rect" || tool === "line") {
+      if (tool === "rect" || tool === "line" || tool === "text") {
+        dragStartRef.current = point;
         setDragStart(point);
         setDragCurrent(point);
-        return;
-      }
-
-      if (tool === "text") {
-        const element: TextElement = {
-          id: createId("text"),
-          type: "text",
-          x: point.x,
-          y: point.y,
-          text: textContent,
-          font: textFont,
-        };
-
-        onProjectChange(addElementToScreen(project, project.activeScreenId, element));
-        setSelectedElementId(element.id);
       }
     },
-    [onProjectChange, project, textContent, textFont, tool],
+    [tool],
   );
 
   const handlePreviewPointerMove = useCallback(
     (point: Point) => {
-      if (tool === "select" && dragStart !== null && dragOriginalElementRef.current !== null) {
-        const dx = point.x - dragStart.x;
-        const dy = point.y - dragStart.y;
+      const interactionStart = dragStartRef.current ?? dragStart;
+
+      if (tool === "select" && interactionStart !== null && dragOriginalElementRef.current !== null) {
+        const dx = point.x - interactionStart.x;
+        const dy = point.y - interactionStart.y;
         const original = dragOriginalElementRef.current;
 
         switch (original.type) {
@@ -182,7 +322,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         return;
       }
 
-      if (dragStart !== null) {
+      if (dragStartRef.current !== null) {
         setDragCurrent(point);
       }
     },
@@ -198,18 +338,21 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
           );
         }
         dragOriginalElementRef.current = null;
+        dragStartRef.current = null;
         setDragPreviewElement(null);
         setDragStart(null);
         setDragCurrent(null);
         return;
       }
 
-      if (dragStart === null) {
+      const interactionStart = dragStartRef.current ?? dragStart;
+
+      if (interactionStart === null) {
         return;
       }
 
       if (tool === "rect") {
-        const rect = createRectFromPoints(dragStart, point);
+        const rect = createRectFromPoints(interactionStart, point);
 
         if (rect.width > 0 && rect.height > 0) {
           const element: RectElement = {
@@ -224,12 +367,12 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         }
       }
 
-      if (tool === "line" && (dragStart.x !== point.x || dragStart.y !== point.y)) {
+      if (tool === "line" && (interactionStart.x !== point.x || interactionStart.y !== point.y)) {
         const element: LineElement = {
           id: createId("line"),
           type: "line",
-          x1: dragStart.x,
-          y1: dragStart.y,
+          x1: interactionStart.x,
+          y1: interactionStart.y,
           x2: point.x,
           y2: point.y,
         };
@@ -238,10 +381,25 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         setSelectedElementId(element.id);
       }
 
+      if (tool === "text") {
+        const element: TextElement = {
+          id: createId("text"),
+          type: "text",
+          x: point.x,
+          y: point.y,
+          text: textContent,
+          font: textFont,
+        };
+
+        onProjectChange(addElementToScreen(project, project.activeScreenId, element));
+        setSelectedElementId(element.id);
+      }
+
+      dragStartRef.current = null;
       setDragStart(null);
       setDragCurrent(null);
     },
-    [dragPreviewElement, dragStart, onProjectChange, project, rectFilled, tool],
+    [dragPreviewElement, dragStart, onProjectChange, project, rectFilled, textContent, textFont, tool],
   );
 
   const handleElementPointerDown = useCallback(
@@ -252,6 +410,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         if (element) {
           dragOriginalElementRef.current = element;
           setDragPreviewElement(element);
+          dragStartRef.current = point;
           setDragStart(point);
           setDragCurrent(point);
         }
@@ -280,21 +439,88 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
     setSelectedElementId(null);
   }
 
-  const saveProject = useCallback(async () => {
-    try {
-      await projectStorage.saveProject(project);
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : "No se pudo guardar el proyecto.");
+  const clearSaveStatusTimeout = useCallback(() => {
+    if (saveStatusTimeoutRef.current !== null) {
+      window.clearTimeout(saveStatusTimeoutRef.current);
+      saveStatusTimeoutRef.current = null;
     }
-  }, [project]);
+  }, []);
 
-  const saveProjectAs = useCallback(async () => {
-    try {
-      await projectStorage.saveProjectAs(project);
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : "No se pudo guardar el proyecto.");
+  const showSavedStatus = useCallback(() => {
+    setSaveState("saved");
+    clearSaveStatusTimeout();
+    saveStatusTimeoutRef.current = window.setTimeout(() => {
+      saveStatusTimeoutRef.current = null;
+
+      if (
+        !saveInFlightRef.current &&
+        latestProjectJsonRef.current === lastSavedProjectJsonRef.current
+      ) {
+        setSaveState("idle");
+      }
+    }, savedVisibleMs);
+  }, [clearSaveStatusTimeout]);
+
+  useEffect(() => clearSaveStatusTimeout, [clearSaveStatusTimeout]);
+
+  const saveProjectWithStatus = useCallback(async (mode: SaveMode): Promise<boolean> => {
+    if (saveInFlightRef.current) {
+      return false;
     }
-  }, [project]);
+
+    const projectToSave = latestProjectRef.current;
+    const projectToSaveJson = latestProjectJsonRef.current;
+    const startedAt = performance.now();
+
+    saveInFlightRef.current = true;
+    clearSaveStatusTimeout();
+    setSaveState("saving");
+
+    try {
+      const saved = mode === "saveAs"
+        ? await projectStorage.saveProjectAs(projectToSave)
+        : await projectStorage.saveProject(projectToSave);
+
+      await waitRemainingTime(startedAt, minSavingVisibleMs);
+
+      if (!saved) {
+        setSaveState(projectToSaveJson === lastSavedProjectJsonRef.current ? "idle" : "dirty");
+        return false;
+      }
+
+      lastSavedProjectJsonRef.current = projectToSaveJson;
+      setLastSavedProjectJson(projectToSaveJson);
+
+      if (latestProjectJsonRef.current === projectToSaveJson) {
+        showSavedStatus();
+      } else {
+        setSaveState("dirty");
+      }
+
+      return true;
+    } catch (error) {
+      await waitRemainingTime(startedAt, minSavingVisibleMs);
+      console.error(error);
+      setSaveState("error");
+      return false;
+    } finally {
+      saveInFlightRef.current = false;
+
+      if (latestProjectJsonRef.current !== lastSavedProjectJsonRef.current) {
+        window.setTimeout(() => {
+          if (
+            !saveInFlightRef.current &&
+            latestProjectJsonRef.current !== lastSavedProjectJsonRef.current
+          ) {
+            void saveProjectWithStatus("save");
+          }
+        }, autosaveDelayMs);
+      }
+    }
+  }, [clearSaveStatusTimeout, showSavedStatus]);
+
+  const saveProject = useCallback(() => saveProjectWithStatus("save"), [saveProjectWithStatus]);
+  const saveProjectAs = useCallback(() => saveProjectWithStatus("saveAs"), [saveProjectWithStatus]);
 
   const copyExportCode = useCallback(async () => {
     await navigator.clipboard.writeText(exportCode);
@@ -334,7 +560,57 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [project]);
+  }, [saveProject, saveProjectAs]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return;
+    }
+
+    setSaveState((currentState) => currentState === "error" ? currentState : "dirty");
+
+    const timeoutId = window.setTimeout(() => {
+      void saveProject();
+    }, autosaveDelayMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [hasUnsavedChanges, projectJson, saveProject]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges && !isSaving) {
+      return;
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges, isSaving]);
+
+  const requestExit = useCallback(() => {
+    if (hasUnsavedChanges || isSaving) {
+      setShowExitConfirmation(true);
+      return;
+    }
+
+    onExit();
+  }, [hasUnsavedChanges, isSaving, onExit]);
+
+  const saveAndExit = useCallback(async () => {
+    const saved = await saveProject();
+
+    if (saved && latestProjectJsonRef.current === lastSavedProjectJsonRef.current) {
+      onExit();
+    }
+  }, [onExit, saveProject]);
+
+  const exitWithoutSaving = useCallback(() => {
+    setShowExitConfirmation(false);
+    onExit();
+  }, [onExit]);
 
   const startPan = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
@@ -508,15 +784,20 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
             <Grid2x2 />
           </button>
         </div>
+        <div className={`toolbar-status toolbar-status-${saveState}`} aria-live="polite">
+          {isSaving ? <span className="status-spinner" aria-hidden="true" /> : null}
+          <span>{statusMessage}</span>
+        </div>
         <div className="toolbar-group toolbar-group-system">
-          <button type="button" aria-label="Salir" data-tooltip="Salir" onClick={onExit}>
+          <button type="button" aria-label="Salir" data-tooltip="Salir" onClick={requestExit}>
             <LogOut />
           </button>
           <button
             className="toolbar-primary-action"
             type="button"
-            aria-label="Guardar"
-            data-tooltip="Guardar"
+            aria-label={isSaving ? "Guardando" : "Guardar"}
+            data-tooltip={isSaving ? "Guardando" : "Guardar"}
+            disabled={isSaving}
             onClick={saveProject}
           >
             <HardDrive />
@@ -524,8 +805,9 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
           <button
             className="toolbar-secondary-action"
             type="button"
-            aria-label="Guardar como"
-            data-tooltip="Guardar como"
+            aria-label={isSaving ? "Guardando" : "Guardar como"}
+            data-tooltip={isSaving ? "Guardando" : "Guardar como"}
+            disabled={isSaving}
             onClick={saveProjectAs}
           >
             <SaveAll />
@@ -543,6 +825,21 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
           </button>
         </div>
       </div>
+
+      <ScreenListPanel
+        project={project}
+        editingScreenId={editingScreenId}
+        editingScreenName={editingScreenName}
+        onEditingScreenNameChange={setEditingScreenName}
+        onSelectScreen={handleSelectScreen}
+        onAddScreen={handleAddScreen}
+        onStartRenameScreen={handleStartRenameScreen}
+        onCommitRenameScreen={handleCommitRenameScreen}
+        onCancelRenameScreen={handleCancelRenameScreen}
+        onDuplicateScreen={handleDuplicateScreen}
+        onRemoveScreen={handleRemoveScreen}
+        onMoveScreen={handleMoveScreen}
+      />
 
       {tool === "rect" ? (
         <div className="tool-options-panel" aria-label="Opciones de rectángulo">
@@ -725,8 +1022,72 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
           </div>
         </aside>
       ) : null}
+
+      {showExitConfirmation ? (
+        <div className="modal-backdrop" role="presentation">
+          <section
+            className="confirm-exit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-exit-title"
+          >
+            <h2 id="confirm-exit-title">Hay cambios sin guardar</h2>
+            <p>
+              {isSaving
+                ? "El proyecto todavía se está guardando. Espera a que termine o sal sin guardar."
+                : "Guarda el proyecto antes de salir o descarta los cambios."}
+            </p>
+            <div className="confirm-exit-actions">
+              <button type="button" onClick={() => setShowExitConfirmation(false)}>
+                Cancelar
+              </button>
+              <button type="button" onClick={exitWithoutSaving}>
+                Salir sin guardar
+              </button>
+              <button
+                className="toolbar-primary-action"
+                type="button"
+                disabled={isSaving}
+                onClick={saveAndExit}
+              >
+                Guardar y salir
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
+}
+
+function getSaveStatusMessage(saveState: SaveState, hasUnsavedChanges: boolean): string {
+  if (saveState === "saving") {
+    return "Guardando…";
+  }
+
+  if (saveState === "saved") {
+    return "Guardado";
+  }
+
+  if (saveState === "error") {
+    return "Error al guardar";
+  }
+
+  if (hasUnsavedChanges) {
+    return "Cambios sin guardar";
+  }
+
+  return "";
+}
+
+function waitRemainingTime(startedAt: number, minimumDurationMs: number): Promise<void> {
+  const remainingMs = minimumDurationMs - (performance.now() - startedAt);
+
+  if (remainingMs <= 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => window.setTimeout(resolve, remainingMs));
 }
 
 function TextFontFields({ font, onChange }: { font: string; onChange: (font: string) => void }) {
@@ -837,6 +1198,8 @@ function getDraftElement(
   start: Point | null,
   current: Point | null,
   rectFilled: boolean,
+  textContent: string,
+  textFont: string,
 ): DraftElement | null {
   if (start === null || current === null) {
     return null;
@@ -860,6 +1223,16 @@ function getDraftElement(
     };
   }
 
+  if (tool === "text") {
+    return {
+      type: "text",
+      x: current.x,
+      y: current.y,
+      text: textContent,
+      font: textFont,
+    };
+  }
+
   return null;
 }
 
@@ -870,6 +1243,48 @@ function createRectFromPoints(start: Point, end: Point) {
     width: Math.abs(end.x - start.x) + 1,
     height: Math.abs(end.y - start.y) + 1,
   };
+}
+
+function getNextScreenName(project: Project): string {
+  let index = project.screens.length + 1;
+
+  while (project.screens.some((screen) => screen.name === `Screen ${index}`)) {
+    index++;
+  }
+
+  return `Screen ${index}`;
+}
+
+function getDuplicateScreenName(name: string, project: Project): string {
+  let index = 1;
+  let candidate = `${name} copia`;
+
+  while (project.screens.some((screen) => screen.name === candidate)) {
+    index++;
+    candidate = `${name} copia ${index}`;
+  }
+
+  return candidate;
+}
+
+function cloneElementWithNewId(element: DesignElement): DesignElement {
+  switch (element.type) {
+    case "rect":
+      return {
+        ...element,
+        id: createId("rect"),
+      };
+    case "line":
+      return {
+        ...element,
+        id: createId("line"),
+      };
+    case "text":
+      return {
+        ...element,
+        id: createId("text"),
+      };
+  }
 }
 
 function clampZoom(value: number): number {
