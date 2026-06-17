@@ -17,3 +17,15 @@
 .screen-preview-grid line {
   vector-effect: non-scaling-stroke;
 }
+
+.gizmo-handle {
+  fill: #1e1e1e;
+  stroke: #ffffff;
+  stroke-width: 0.35px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
+}
+
+.gizmo-handle:hover {
+  fill: #444;
+}

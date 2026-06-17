@@ -70,6 +70,7 @@ import {
 } from "../core";
 import {
   type DraftElement,
+  type HandleId,
   type Point,
   ScreenPreview,
 } from "../preview/ScreenPreview";
@@ -175,6 +176,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const saveStatusTimeoutRef = useRef<number | null>(null);
   const imageReprocessTimeoutRef = useRef<number | null>(null);
   const imageReprocessVersionRef = useRef(0);
+  const activeHandleRef = useRef<HandleId>("move");
 
   const projectJson = useMemo(() => JSON.stringify(project), [project]);
   const hasUnsavedChanges = projectJson !== lastSavedProjectJson;
@@ -388,44 +390,70 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         const dx = point.x - interactionStart.x;
         const dy = point.y - interactionStart.y;
         const original = dragOriginalElementRef.current;
+        const handle = activeHandleRef.current;
 
         switch (original.type) {
-          case "rect":
-            setDragPreviewElement({
-              ...original,
-              x: original.x + dx,
-              y: original.y + dy,
-            });
+          case "rect": {
+            if (handle === "move") {
+              setDragPreviewElement({ ...original, x: original.x + dx, y: original.y + dy });
+            } else if (handle === "rect-nw") {
+              // mover esquina NW: x,y se mueven, ancho/alto se ajustan desde la esquina opuesta (SE)
+              const fixedX = original.x + original.width;
+              const fixedY = original.y + original.height;
+              const newX = Math.min(point.x, fixedX - 1);
+              const newY = Math.min(point.y, fixedY - 1);
+              setDragPreviewElement({ ...original, x: newX, y: newY, width: fixedX - newX, height: fixedY - newY });
+            } else if (handle === "rect-ne") {
+              // mover esquina NE: x fijo (SW), y se mueve, ancho/alto cambian
+              const fixedY = original.y + original.height;
+              const newY = Math.min(point.y, fixedY - 1);
+              const newWidth = Math.max(1, point.x - original.x + 1);
+              setDragPreviewElement({ ...original, y: newY, width: newWidth, height: fixedY - newY });
+            } else if (handle === "rect-sw") {
+              // mover esquina SW: y fijo (NE), x se mueve, ancho/alto cambian
+              const fixedX = original.x + original.width;
+              const newX = Math.min(point.x, fixedX - 1);
+              const newHeight = Math.max(1, point.y - original.y + 1);
+              setDragPreviewElement({ ...original, x: newX, width: fixedX - newX, height: newHeight });
+            } else if (handle === "rect-se") {
+              // mover esquina SE: x,y fijos (NW), ancho/alto crecen
+              const newWidth = Math.max(1, point.x - original.x + 1);
+              const newHeight = Math.max(1, point.y - original.y + 1);
+              setDragPreviewElement({ ...original, width: newWidth, height: newHeight });
+            }
             break;
-          case "circle":
-            setDragPreviewElement({
-              ...original,
-              x: original.x + dx,
-              y: original.y + dy,
-            });
+          }
+          case "circle": {
+            if (handle === "move") {
+              setDragPreviewElement({ ...original, x: original.x + dx, y: original.y + dy });
+            } else if (handle === "circle-r") {
+              // el handle está en (cx+r, cy); drag horizontal cambia el radio
+              const newRadius = Math.max(0, point.x - original.x);
+              setDragPreviewElement({ ...original, radius: newRadius });
+            }
             break;
-          case "line":
-            setDragPreviewElement({
-              ...original,
-              x1: original.x1 + dx,
-              y1: original.y1 + dy,
-              x2: original.x2 + dx,
-              y2: original.y2 + dy,
-            });
+          }
+          case "line": {
+            if (handle === "move") {
+              setDragPreviewElement({
+                ...original,
+                x1: original.x1 + dx,
+                y1: original.y1 + dy,
+                x2: original.x2 + dx,
+                y2: original.y2 + dy,
+              });
+            } else if (handle === "line-p1") {
+              setDragPreviewElement({ ...original, x1: point.x, y1: point.y });
+            } else if (handle === "line-p2") {
+              setDragPreviewElement({ ...original, x2: point.x, y2: point.y });
+            }
             break;
+          }
           case "text":
-            setDragPreviewElement({
-              ...original,
-              x: original.x + dx,
-              y: original.y + dy,
-            });
+            setDragPreviewElement({ ...original, x: original.x + dx, y: original.y + dy });
             break;
           case "image":
-            setDragPreviewElement({
-              ...original,
-              x: original.x + dx,
-              y: original.y + dy,
-            });
+            setDragPreviewElement({ ...original, x: original.x + dx, y: original.y + dy });
             break;
         }
         return;
@@ -533,12 +561,32 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         setSelectedElementId(elementId);
         const element = activeScreen.elements.find((el) => el.id === elementId);
         if (element) {
+          activeHandleRef.current = "move";
           dragOriginalElementRef.current = element;
           setDragPreviewElement(element);
           dragStartRef.current = point;
           setDragStart(point);
           setDragCurrent(point);
         }
+      }
+    },
+    [activeScreen.elements, tool],
+  );
+
+  const handleHandlePointerDown = useCallback(
+    (elementId: string, handleId: HandleId, point: Point) => {
+      if (tool !== "select") return;
+      setSelectedElementId(elementId);
+      const element = activeScreen.elements.find((el) => el.id === elementId);
+      if (element) {
+        activeHandleRef.current = handleId;
+        dragOriginalElementRef.current = element;
+        setDragPreviewElement(element);
+        // Para handles de punto (line-p1, line-p2, circle-r) el dragStart no se usa
+        // para calcular dx/dy, pero lo inicializamos igual por consistencia.
+        dragStartRef.current = point;
+        setDragStart(point);
+        setDragCurrent(point);
       }
     },
     [activeScreen.elements, tool],
@@ -1381,6 +1429,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
                     onPointerUp={isActive ? handlePreviewPointerUp : undefined}
                     onElementPointerDown={isActive && tool === "select" ? handleElementPointerDown : undefined}
                     onElementContextMenu={isActive ? handleElementContextMenu : undefined}
+                    onHandlePointerDown={isActive && tool === "select" ? handleHandlePointerDown : undefined}
                   />
                 </div>
               </div>

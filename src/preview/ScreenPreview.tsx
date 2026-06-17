@@ -12,6 +12,16 @@ export type Point = {
   y: number;
 };
 
+export type HandleId =
+  | "move"
+  | "line-p1"
+  | "line-p2"
+  | "rect-nw"
+  | "rect-ne"
+  | "rect-sw"
+  | "rect-se"
+  | "circle-r";
+
 export type DraftElement =
   | {
       type: "rect";
@@ -64,6 +74,7 @@ type ScreenPreviewProps = {
   onPointerUp?: (point: Point) => void;
   onElementPointerDown?: (elementId: string, point: Point) => void;
   onElementContextMenu?: (elementId: string, event: React.MouseEvent<SVGElement>) => void;
+  onHandlePointerDown?: (elementId: string, handleId: HandleId, point: Point) => void;
 };
 
 export const ScreenPreview = memo(function ScreenPreview({
@@ -78,6 +89,7 @@ export const ScreenPreview = memo(function ScreenPreview({
   onPointerUp,
   onElementPointerDown,
   onElementContextMenu,
+  onHandlePointerDown,
 }: ScreenPreviewProps) {
   const getPoint = useCallback(
     (event: PointerEvent<any>): Point => {
@@ -206,6 +218,20 @@ export const ScreenPreview = memo(function ScreenPreview({
           </g>
         );
       })}
+      {/* Gizmo layer: handles del elemento seleccionado */}
+      {(() => {
+        if (selectedElementId === null || onHandlePointerDown === undefined) return null;
+        const activeEl = screen.elements.find((el) => el.id === selectedElementId);
+        const renderEl = dragPreviewElement?.id === selectedElementId ? dragPreviewElement : activeEl;
+        if (renderEl === undefined) return null;
+        return (
+          <GizmoLayer
+            element={renderEl}
+            getPoint={getPoint}
+            onHandlePointerDown={onHandlePointerDown}
+          />
+        );
+      })()}
       {draftElement?.type === "rect" && draftElement.width > 0 && draftElement.height > 0 ? (
         draftElement.filled || draftElement.width === 1 || draftElement.height === 1 ? (
           <rect
@@ -264,6 +290,107 @@ export const ScreenPreview = memo(function ScreenPreview({
     </svg>
   );
 });
+
+// ---------------------------------------------------------------------------
+// GizmoLayer: capa de handles interactivos para el elemento seleccionado
+// ---------------------------------------------------------------------------
+
+const HANDLE_RADIUS = 0.7; // radio del handle en coordenadas del viewBox
+
+type GizmoLayerProps = {
+  element: DesignElement;
+  getPoint: (event: PointerEvent<any>) => Point;
+  onHandlePointerDown: (elementId: string, handleId: HandleId, point: Point) => void;
+};
+
+function GizmoLayer({ element, getPoint, onHandlePointerDown }: GizmoLayerProps) {
+  function makeHandlePointerDown(handleId: HandleId) {
+    return (event: PointerEvent<SVGCircleElement>) => {
+      if (event.button !== 0) return;
+      event.stopPropagation();
+      const svg = event.currentTarget.closest("svg");
+      if (svg) svg.setPointerCapture(event.pointerId);
+      onHandlePointerDown(element.id, handleId, getPoint(event));
+    };
+  }
+
+  if (element.type === "line") {
+    // +0.5: el pixel en coord n ocupa [n, n+1], su centro visual es n+0.5
+    return (
+      <g className="gizmo-layer" pointerEvents="all">
+        <GizmoHandle
+          cx={element.x1 + 0.5}
+          cy={element.y1 + 0.5}
+          handleId="line-p1"
+          cursor="crosshair"
+          onPointerDown={makeHandlePointerDown("line-p1")}
+        />
+        <GizmoHandle
+          cx={element.x2 + 0.5}
+          cy={element.y2 + 0.5}
+          handleId="line-p2"
+          cursor="crosshair"
+          onPointerDown={makeHandlePointerDown("line-p2")}
+        />
+      </g>
+    );
+  }
+
+  if (element.type === "rect") {
+    // Las esquinas del stroke del rect están en x+0.5 y x+width-0.5
+    const { x, y, width, height } = element;
+    const x0 = x + 0.5;
+    const y0 = y + 0.5;
+    const x1 = x + width - 0.5;
+    const y1 = y + height - 0.5;
+    return (
+      <g className="gizmo-layer" pointerEvents="all">
+        <GizmoHandle cx={x0} cy={y0} handleId="rect-nw" cursor="nwse-resize" onPointerDown={makeHandlePointerDown("rect-nw")} />
+        <GizmoHandle cx={x1} cy={y0} handleId="rect-ne" cursor="nesw-resize" onPointerDown={makeHandlePointerDown("rect-ne")} />
+        <GizmoHandle cx={x0} cy={y1} handleId="rect-sw" cursor="nesw-resize" onPointerDown={makeHandlePointerDown("rect-sw")} />
+        <GizmoHandle cx={x1} cy={y1} handleId="rect-se" cursor="nwse-resize" onPointerDown={makeHandlePointerDown("rect-se")} />
+      </g>
+    );
+  }
+
+  if (element.type === "circle") {
+    // El handle de radio está en el pixel más a la derecha del círculo
+    return (
+      <g className="gizmo-layer" pointerEvents="all">
+        <GizmoHandle
+          cx={element.x + element.radius + 0.5}
+          cy={element.y + 0.5}
+          handleId="circle-r"
+          cursor="ew-resize"
+          onPointerDown={makeHandlePointerDown("circle-r")}
+        />
+      </g>
+    );
+  }
+
+  return null;
+}
+
+type GizmoHandleProps = {
+  cx: number;
+  cy: number;
+  handleId: HandleId;
+  cursor: string;
+  onPointerDown: (event: PointerEvent<SVGCircleElement>) => void;
+};
+
+function GizmoHandle({ cx, cy, cursor, onPointerDown }: GizmoHandleProps) {
+  return (
+    <circle
+      className="gizmo-handle"
+      cx={cx}
+      cy={cy}
+      r={HANDLE_RADIUS}
+      style={{ cursor }}
+      onPointerDown={onPointerDown}
+    />
+  );
+}
 
 type RectPreviewProps = {
   element: RectElement;
