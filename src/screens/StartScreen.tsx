@@ -1,5 +1,5 @@
 import { type FormEvent, memo, useCallback, useEffect, useState } from "react";
-import { MoreVertical, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { createProject, getFirstScreen, setFirstScreenActive, type Project } from "../core";
 import { ScreenPreview } from "../preview/ScreenPreview";
 import { projectStorage, type StoredProject } from "../platform/projectStorage";
@@ -128,6 +128,39 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
         currentError instanceof Error
           ? currentError.message
           : "No se pudo eliminar el proyecto.",
+      );
+    }
+  }, []);
+
+  const handleRenameProject = useCallback(async (projectId: string, currentName: string) => {
+    const newName = window.prompt("Nuevo nombre del proyecto:", currentName);
+
+    if (newName === null) {
+      return;
+    }
+
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === currentName) {
+      return;
+    }
+
+    try {
+      setError(null);
+      const newId = await projectStorage.renameProject(projectId, trimmed);
+
+      setProjects((prevProjects) =>
+        prevProjects.map((p) =>
+          p.id === projectId
+            ? { ...p, id: newId, project: { ...p.project, name: trimmed } }
+            : p
+        )
+      );
+      setActiveMenuProjectId(null);
+    } catch (currentError) {
+      setError(
+        currentError instanceof Error
+          ? currentError.message
+          : "No se pudo renombrar el proyecto.",
       );
     }
   }, []);
@@ -261,6 +294,7 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
                 onOpen={openStoredProject}
                 onToggleMenu={toggleMenuProject}
                 onDelete={handleDeleteProject}
+                onRename={handleRenameProject}
               />
             ))}
           </div>
@@ -279,12 +313,14 @@ const ProjectCard = memo(function ProjectCard({
   onOpen,
   onToggleMenu,
   onDelete,
+  onRename,
 }: {
   storedProject: StoredProject;
   isMenuOpen: boolean;
   onOpen: (projectId: string) => void;
   onToggleMenu: (projectId: string) => void;
   onDelete: (projectId: string, projectName: string) => void;
+  onRename: (projectId: string, projectName: string) => void;
 }) {
   const firstScreen = getFirstScreen(storedProject.project);
 
@@ -329,6 +365,17 @@ const ProjectCard = memo(function ProjectCard({
             </button>
             {isMenuOpen ? (
               <div className="project-card-dropdown">
+                <button
+                  type="button"
+                  className="dropdown-item"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRename(storedProject.id, storedProject.project.name);
+                  }}
+                >
+                  <Pencil size={14} />
+                  <span>Renombrar</span>
+                </button>
                 <button
                   type="button"
                   className="dropdown-item delete-item"

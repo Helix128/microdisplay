@@ -2,14 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   addElementToScreen,
   addScreen,
+  bringElementForward,
+  bringElementToFront,
   createProject,
   duplicateScreen,
   getActiveScreen,
   getFirstScreen,
   removeElementFromScreen,
   removeScreen,
+  renameProject,
   renameScreen,
   reorderScreen,
+  sendElementBackward,
+  sendElementToBack,
   setActiveScreen,
   setFirstScreenActive,
   updateElementInScreen,
@@ -723,5 +728,134 @@ describe("parseProjectJson", () => {
     );
 
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("renameProject", () => {
+  it("renames a project and keeps other properties intact", () => {
+    const project = createProject({ name: "Old Name" });
+    const updated = renameProject(project, "New Name");
+
+    expect(updated.name).toBe("New Name");
+    expect(updated.device).toEqual(project.device);
+    expect(updated.screens).toEqual(project.screens);
+    expect(updated.activeScreenId).toBe(project.activeScreenId);
+  });
+
+  it("does not mutate the original project", () => {
+    const project = createProject({ name: "Old Name" });
+    renameProject(project, "New Name");
+
+    expect(project.name).toBe("Old Name");
+  });
+});
+
+describe("element layer ordering", () => {
+  const setupProjectWithElements = () => {
+    const project = createProject({ screenId: "screen-1" });
+    const el1 = { id: "el-1", type: "rect" as const, x: 0, y: 0, width: 10, height: 10, filled: false };
+    const el2 = { id: "el-2", type: "circle" as const, x: 5, y: 5, radius: 3, filled: false };
+    const el3 = { id: "el-3", type: "line" as const, x1: 0, y1: 0, x2: 10, y2: 10 };
+    
+    let updated = addElementToScreen(project, "screen-1", el1);
+    updated = addElementToScreen(updated, "screen-1", el2);
+    updated = addElementToScreen(updated, "screen-1", el3);
+    return { project: updated, el1, el2, el3 };
+  };
+
+  describe("bringElementToFront", () => {
+    it("moves element to the end of the elements array", () => {
+      const { project } = setupProjectWithElements();
+      const updated = bringElementToFront(project, "screen-1", "el-1");
+      const elements = updated.screens[0]!.elements;
+      
+      expect(elements.map(e => e.id)).toEqual(["el-2", "el-3", "el-1"]);
+    });
+
+    it("does nothing if element is already at the front", () => {
+      const { project } = setupProjectWithElements();
+      const updated = bringElementToFront(project, "screen-1", "el-3");
+      const elements = updated.screens[0]!.elements;
+      
+      expect(elements.map(e => e.id)).toEqual(["el-1", "el-2", "el-3"]);
+    });
+
+    it("does nothing if element does not exist", () => {
+      const { project } = setupProjectWithElements();
+      const updated = bringElementToFront(project, "screen-1", "el-nonexistent");
+      const elements = updated.screens[0]!.elements;
+      
+      expect(elements.map(e => e.id)).toEqual(["el-1", "el-2", "el-3"]);
+    });
+
+    it("does not mutate the original project", () => {
+      const { project } = setupProjectWithElements();
+      bringElementToFront(project, "screen-1", "el-1");
+      const elements = project.screens[0]!.elements;
+      
+      expect(elements.map(e => e.id)).toEqual(["el-1", "el-2", "el-3"]);
+    });
+  });
+
+  describe("sendElementToBack", () => {
+    it("moves element to the beginning of the elements array", () => {
+      const { project } = setupProjectWithElements();
+      const updated = sendElementToBack(project, "screen-1", "el-3");
+      const elements = updated.screens[0]!.elements;
+      
+      expect(elements.map(e => e.id)).toEqual(["el-3", "el-1", "el-2"]);
+    });
+
+    it("does nothing if element is already at the back", () => {
+      const { project } = setupProjectWithElements();
+      const updated = sendElementToBack(project, "screen-1", "el-1");
+      const elements = updated.screens[0]!.elements;
+      
+      expect(elements.map(e => e.id)).toEqual(["el-1", "el-2", "el-3"]);
+    });
+
+    it("does not mutate the original project", () => {
+      const { project } = setupProjectWithElements();
+      sendElementToBack(project, "screen-1", "el-3");
+      const elements = project.screens[0]!.elements;
+      
+      expect(elements.map(e => e.id)).toEqual(["el-1", "el-2", "el-3"]);
+    });
+  });
+
+  describe("bringElementForward", () => {
+    it("swaps element with the next element", () => {
+      const { project } = setupProjectWithElements();
+      const updated = bringElementForward(project, "screen-1", "el-1");
+      const elements = updated.screens[0]!.elements;
+      
+      expect(elements.map(e => e.id)).toEqual(["el-2", "el-1", "el-3"]);
+    });
+
+    it("does nothing if element is already at the end", () => {
+      const { project } = setupProjectWithElements();
+      const updated = bringElementForward(project, "screen-1", "el-3");
+      const elements = updated.screens[0]!.elements;
+      
+      expect(elements.map(e => e.id)).toEqual(["el-1", "el-2", "el-3"]);
+    });
+  });
+
+  describe("sendElementBackward", () => {
+    it("swaps element with the previous element", () => {
+      const { project } = setupProjectWithElements();
+      const updated = sendElementBackward(project, "screen-1", "el-2");
+      const elements = updated.screens[0]!.elements;
+      
+      expect(elements.map(e => e.id)).toEqual(["el-2", "el-1", "el-3"]);
+    });
+
+    it("does nothing if element is already at the beginning", () => {
+      const { project } = setupProjectWithElements();
+      const updated = sendElementBackward(project, "screen-1", "el-1");
+      const elements = updated.screens[0]!.elements;
+      
+      expect(elements.map(e => e.id)).toEqual(["el-1", "el-2", "el-3"]);
+    });
   });
 });

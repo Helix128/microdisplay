@@ -2,7 +2,7 @@ import { documentDir, join } from "@tauri-apps/api/path";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { BaseDirectory, mkdir, readDir, readTextFile, remove, writeTextFile } from "@tauri-apps/plugin-fs";
 import { parseProjectJson } from "../../core/projectFile";
-import type { Project } from "../../core";
+import { renameProject, type Project } from "../../core";
 import type { ProjectStorage, StoredProject } from "../projectStorage";
 
 const lastProjectPathKey = "microdisplay:tauri:last-project-path";
@@ -89,6 +89,37 @@ export const tauriProjectStorage: ProjectStorage = {
       forgetProjectPath();
     }
   },
+
+  async renameProject(id, newName) {
+    const project = await readProjectFile(id);
+    const updatedProject = renameProject(project, newName);
+
+    const projectFolderPath = await ensureDefaultProjectFolder();
+    const newFileName = `${toFileName(newName)}.json`;
+    const newPath = await join(projectFolderPath, newFileName);
+
+    if (newPath !== id) {
+      const entries = await readDir(projectFolderPath);
+      const exists = entries.some(
+        (entry) => entry.isFile && entry.name.toLowerCase() === newFileName.toLowerCase()
+      );
+
+      if (exists) {
+        throw new Error(`Ya existe un proyecto llamado "${newName}" en la carpeta de proyectos.`);
+      }
+
+      await writeProjectFile(newPath, updatedProject);
+      await remove(id);
+
+      if (currentProjectPath === id) {
+        rememberProjectPath(newPath);
+      }
+      return newPath;
+    } else {
+      await writeProjectFile(id, updatedProject);
+      return id;
+    }
+  },
 };
 
 async function ensureDefaultProjectFolder(): Promise<string> {
@@ -113,6 +144,28 @@ async function readProjectFile(path: string): Promise<Project> {
 async function saveProjectToCurrentPath(project: Project): Promise<boolean> {
   if (currentProjectPath !== null) {
     try {
+      const projectFolderPath = await ensureDefaultProjectFolder();
+      const isDefaultFolder = currentProjectPath.startsWith(projectFolderPath);
+
+      if (isDefaultFolder) {
+        const expectedFileName = `${toFileName(project.name)}.json`;
+        const expectedPath = await join(projectFolderPath, expectedFileName);
+
+        if (expectedPath !== currentProjectPath) {
+          const entries = await readDir(projectFolderPath);
+          const exists = entries.some(
+            (entry) => entry.isFile && entry.name.toLowerCase() === expectedFileName.toLowerCase()
+          );
+
+          if (!exists) {
+            await writeProjectFile(expectedPath, project);
+            await remove(currentProjectPath);
+            rememberProjectPath(expectedPath);
+            return true;
+          }
+        }
+      }
+
       await writeProjectFile(currentProjectPath, project);
       return true;
     } catch {

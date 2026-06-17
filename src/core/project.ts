@@ -41,6 +41,13 @@ export function createProject(options: CreateProjectOptions = {}): Project {
   };
 }
 
+export function renameProject(project: Project, name: string): Project {
+  return {
+    ...project,
+    name,
+  };
+}
+
 export function getFirstScreen(project: Project): Screen {
   return project.screens[0]!;
 }
@@ -201,5 +208,111 @@ export function updateElementInScreen(
           }
         : screen,
     ),
+  };
+}
+
+export function bringElementToFront(
+  project: Project,
+  screenId: string,
+  elementId: string,
+): Project {
+  return {
+    ...project,
+    screens: project.screens.map((screen) => {
+      if (screen.id !== screenId) {
+        return screen;
+      }
+      const index = screen.elements.findIndex((el) => el.id === elementId);
+      if (index === -1 || index === screen.elements.length - 1) {
+        return screen;
+      }
+      const nextElements = [...screen.elements];
+      const [element] = nextElements.splice(index, 1);
+      nextElements.push(element!);
+      return {
+        ...screen,
+        elements: nextElements,
+      };
+    }),
+  };
+}
+
+export function sendElementToBack(
+  project: Project,
+  screenId: string,
+  elementId: string,
+): Project {
+  return {
+    ...project,
+    screens: project.screens.map((screen) => {
+      if (screen.id !== screenId) {
+        return screen;
+      }
+      const index = screen.elements.findIndex((el) => el.id === elementId);
+      if (index === -1 || index === 0) {
+        return screen;
+      }
+      const nextElements = [...screen.elements];
+      const [element] = nextElements.splice(index, 1);
+      nextElements.unshift(element!);
+      return {
+        ...screen,
+        elements: nextElements,
+      };
+    }),
+  };
+}
+
+export function bringElementForward(
+  project: Project,
+  screenId: string,
+  elementId: string,
+): Project {
+  return {
+    ...project,
+    screens: project.screens.map((screen) => {
+      if (screen.id !== screenId) {
+        return screen;
+      }
+      const index = screen.elements.findIndex((el) => el.id === elementId);
+      if (index === -1 || index === screen.elements.length - 1) {
+        return screen;
+      }
+      const nextElements = [...screen.elements];
+      const temp = nextElements[index]!;
+      nextElements[index] = nextElements[index + 1]!;
+      nextElements[index + 1] = temp;
+      return {
+        ...screen,
+        elements: nextElements,
+      };
+    }),
+  };
+}
+
+export function sendElementBackward(
+  project: Project,
+  screenId: string,
+  elementId: string,
+): Project {
+  return {
+    ...project,
+    screens: project.screens.map((screen) => {
+      if (screen.id !== screenId) {
+        return screen;
+      }
+      const index = screen.elements.findIndex((el) => el.id === elementId);
+      if (index === -1 || index === 0) {
+        return screen;
+      }
+      const nextElements = [...screen.elements];
+      const temp = nextElements[index]!;
+      nextElements[index] = nextElements[index - 1]!;
+      nextElements[index - 1] = temp;
+      return {
+        ...screen,
+        elements: nextElements,
+      };
+    }),
   };
 }

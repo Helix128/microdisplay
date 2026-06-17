@@ -1,5 +1,5 @@
 import { parseProjectJson } from "../../core/projectFile";
-import type { Project } from "../../core";
+import { renameProject, type Project } from "../../core";
 import { createId } from "../../utils/id";
 import type { ProjectStorage } from "../projectStorage";
 
@@ -74,6 +74,16 @@ export const browserProjectStorage: ProjectStorage = {
   async deleteProject(id) {
     localStorage.removeItem(projectStorageKey(id));
     removeProjectFromIndex(id);
+  },
+
+  async renameProject(id, newName) {
+    const stored = readStoredProject(id);
+    if (stored === null) {
+      throw new Error("Proyecto no encontrado");
+    }
+    const updatedProject = renameProject(stored.project, newName);
+    saveStoredProject(id, updatedProject);
+    return id;
   },
 };
 

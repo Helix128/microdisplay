@@ -16,6 +16,7 @@ export type ProjectStorage = {
   listProjects(): Promise<StoredProject[]>;
   openStoredProject(id: string): Promise<Project | null>;
   deleteProject(id: string): Promise<void>;
+  renameProject(id: string, newName: string): Promise<string>;
 };
 
 export const projectStorage: ProjectStorage = isTauriRuntime()

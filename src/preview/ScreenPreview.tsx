@@ -63,6 +63,7 @@ type ScreenPreviewProps = {
   onPointerMove?: (point: Point) => void;
   onPointerUp?: (point: Point) => void;
   onElementPointerDown?: (elementId: string, point: Point) => void;
+  onElementContextMenu?: (elementId: string, event: React.MouseEvent<SVGElement>) => void;
 };
 
 export const ScreenPreview = memo(function ScreenPreview({
@@ -76,6 +77,7 @@ export const ScreenPreview = memo(function ScreenPreview({
   onPointerMove,
   onPointerUp,
   onElementPointerDown,
+  onElementContextMenu,
 }: ScreenPreviewProps) {
   const getPoint = useCallback(
     (event: PointerEvent<any>): Point => {
@@ -123,6 +125,7 @@ export const ScreenPreview = memo(function ScreenPreview({
         onPointerDown === undefined
           ? undefined
           : (event) => {
+              if (event.button !== 0) return;
               event.currentTarget.setPointerCapture(event.pointerId);
               onPointerDown(getPoint(event));
             }
@@ -136,62 +139,72 @@ export const ScreenPreview = memo(function ScreenPreview({
         const renderElement = dragPreviewElement?.id === element.id ? dragPreviewElement : element;
         const selected = renderElement.id === selectedElementId;
 
-        switch (renderElement.type) {
-          case "rect":
-            return (
-              <RectPreview
-                key={renderElement.id}
-                element={renderElement}
-                selected={selected}
-                color={selected ? "#00aaff" : "white"}
-                onElementPointerDown={onElementPointerDown}
-                getPoint={getPoint}
-              />
-            );
-          case "circle":
-            return (
-              <CirclePreview
-                key={renderElement.id}
-                element={renderElement}
-                selected={selected}
-                color={selected ? "#00aaff" : "white"}
-                onElementPointerDown={onElementPointerDown}
-                getPoint={getPoint}
-              />
-            );
-          case "line":
-            return (
-              <LinePreview
-                key={renderElement.id}
-                element={renderElement}
-                color={selected ? "#00aaff" : "white"}
-                onElementPointerDown={onElementPointerDown}
-                getPoint={getPoint}
-              />
-            );
-          case "text":
-            return (
-              <TextPreview
-                key={renderElement.id}
-                element={renderElement}
-                selected={selected}
-                color={selected ? "#00aaff" : "white"}
-                onElementPointerDown={onElementPointerDown}
-                getPoint={getPoint}
-              />
-            );
-          case "image":
-            return (
-              <ImagePreview
-                key={renderElement.id}
-                element={renderElement}
-                selected={selected}
-                color={selected ? "#00aaff" : "white"}
-                onElementPointerDown={onElementPointerDown}
-                getPoint={getPoint}
-              />
-            );
-        }
+        const previewComponent = (() => {
+          switch (renderElement.type) {
+            case "rect":
+              return (
+                <RectPreview
+                  element={renderElement}
+                  selected={selected}
+                  color={selected ? "#00aaff" : "white"}
+                  onElementPointerDown={onElementPointerDown}
+                  getPoint={getPoint}
+                />
+              );
+            case "circle":
+              return (
+                <CirclePreview
+                  element={renderElement}
+                  selected={selected}
+                  color={selected ? "#00aaff" : "white"}
+                  onElementPointerDown={onElementPointerDown}
+                  getPoint={getPoint}
+                />
+              );
+            case "line":
+              return (
+                <LinePreview
+                  element={renderElement}
+                  color={selected ? "#00aaff" : "white"}
+                  onElementPointerDown={onElementPointerDown}
+                  getPoint={getPoint}
+                />
+              );
+            case "text":
+              return (
+                <TextPreview
+                  element={renderElement}
+                  selected={selected}
+                  color={selected ? "#00aaff" : "white"}
+                  onElementPointerDown={onElementPointerDown}
+                  getPoint={getPoint}
+                />
+              );
+            case "image":
+              return (
+                <ImagePreview
+                  element={renderElement}
+                  selected={selected}
+                  color={selected ? "#00aaff" : "white"}
+                  onElementPointerDown={onElementPointerDown}
+                  getPoint={getPoint}
+                />
+              );
+          }
+        })();
+
+        return (
+          <g
+            key={renderElement.id}
+            onContextMenu={
+              onElementContextMenu
+                ? (event) => onElementContextMenu(renderElement.id, event)
+                : undefined
+            }
+          >
+            {previewComponent}
+          </g>
+        );
       })}
       {draftElement?.type === "rect" && draftElement.width > 0 && draftElement.height > 0 ? (
         draftElement.filled || draftElement.width === 1 || draftElement.height === 1 ? (
@@ -271,6 +284,7 @@ const RectPreview = memo(function RectPreview({
     onElementPointerDown === undefined
       ? undefined
       : (event: PointerEvent<SVGElement>) => {
+          if (event.button !== 0) return;
           event.stopPropagation();
           const svg = event.currentTarget.closest("svg");
           if (svg) {
@@ -344,6 +358,7 @@ const CirclePreview = memo(function CirclePreview({
   const handlePointerDown =
     interactive && onElementPointerDown !== undefined
       ? (event: PointerEvent<SVGElement>) => {
+          if (event.button !== 0) return;
           event.stopPropagation();
           const svg = event.currentTarget.closest("svg");
           if (svg) {
@@ -423,6 +438,7 @@ const TextPreview = memo(function TextPreview({
   const handlePointerDown =
     interactive && onElementPointerDown !== undefined
       ? (event: PointerEvent<SVGElement>) => {
+          if (event.button !== 0) return;
           event.stopPropagation();
           const svg = event.currentTarget.closest("svg");
           if (svg) {
@@ -494,6 +510,7 @@ const ImagePreview = memo(function ImagePreview({
   const handlePointerDown =
     interactive && onElementPointerDown !== undefined
       ? (event: PointerEvent<SVGElement>) => {
+          if (event.button !== 0) return;
           event.stopPropagation();
           const svg = event.currentTarget.closest("svg");
           if (svg) {
@@ -554,6 +571,7 @@ const LinePreview = memo(function LinePreview({
   const handlePointerDown =
     interactive && onElementPointerDown !== undefined
       ? (event: PointerEvent<SVGElement>) => {
+          if (event.button !== 0) return;
           event.stopPropagation();
           const svg = event.currentTarget.closest("svg");
           if (svg) {

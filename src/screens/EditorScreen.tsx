@@ -1,5 +1,12 @@
 import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ChevronsDown,
+  ChevronsUp,
   Circle,
+  Copy,
   Download,
   Grid2x2,
   HardDrive,
@@ -8,13 +15,18 @@ import {
   MousePointer2,
   Move,
   PaintBucket,
+  Pencil,
+  Plus,
   RectangleHorizontal,
   SaveAll,
+  Sidebar,
   Slash,
+  Trash2,
   Type,
 } from "lucide-react";
 import {
   type ChangeEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent,
   type WheelEvent,
   useCallback,
@@ -26,16 +38,21 @@ import {
 import {
   addElementToScreen,
   addScreen,
+  bringElementForward,
+  bringElementToFront,
   ditherModes,
   duplicateScreen,
   fitSizeWithin,
   getActiveScreen,
   removeElementFromScreen,
   removeScreen,
+  renameProject,
   renameScreen,
   reorderScreen,
   resizeModes,
   rgbaToXbmBase64,
+  sendElementBackward,
+  sendElementToBack,
   setActiveScreen,
   sizeFromHeight,
   sizeFromWidth,
@@ -71,7 +88,7 @@ import {
 import { importImageSource, renderImageSourceRgba } from "../platform/browser/imageImport";
 import { projectStorage } from "../platform/projectStorage";
 import { createId } from "../utils/id";
-import { ScreenListPanel } from "./ScreenListPanel";
+import { ElementListPanel } from "./ElementListPanel";
 
 type Tool = "select" | "pan" | "rect" | "circle" | "line" | "text" | "image";
 
@@ -108,13 +125,30 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState<Point | null>(null);
   const [dragCurrent, setDragCurrent] = useState<Point | null>(null);
-  const [viewportOffset, setViewportOffset] = useState<Point>({ x: 0, y: 0 });
+  const [viewportOffset, setViewportOffset] = useState<Point>(() => {
+    // Centrar la primera pantalla en el viewport al montar el editor.
+    // El artboard tiene padding: 100px, y la pantalla mide device.width*4 x device.height*4 px.
+    const artboardPadding = 100;
+    const cardW = project.device.width * 4;
+    const cardH = project.device.height * 4 + 32; // +32 por cabecera
+    return {
+      x: Math.round(window.innerWidth / 2 - artboardPadding - cardW / 2),
+      y: Math.round(window.innerHeight / 2 - artboardPadding - cardH / 2),
+    };
+  });
   const [zoom, setZoom] = useState(1);
   const [panStart, setPanStart] = useState<Point | null>(null);
   const [panOrigin, setPanOrigin] = useState<Point | null>(null);
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
   const [showPixelGrid, setShowPixelGrid] = useState(true);
+  const [showLeftSidebar, setShowLeftSidebar] = useState(true);
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    elementId: string | null;
+  }>({ visible: false, x: 0, y: 0, elementId: null });
   const [rectFilled, setRectFilled] = useState(false);
   const [textContent, setTextContent] = useState("Texto");
   const [textFont, setTextFont] = useState(defaultU8g2FontName);
@@ -122,6 +156,8 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
   const [dragPreviewElement, setDragPreviewElement] = useState<DesignElement | null>(null);
   const [editingScreenId, setEditingScreenId] = useState<string | null>(null);
   const [editingScreenName, setEditingScreenName] = useState("");
+  const [isEditingProjectName, setIsEditingProjectName] = useState(false);
+  const [editingProjectName, setEditingProjectName] = useState(project.name);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastSavedProjectJson, setLastSavedProjectJson] = useState(() => JSON.stringify(project));
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
@@ -239,6 +275,40 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
     setEditingScreenId(null);
     setEditingScreenName("");
   }, []);
+
+  const handleStartRenameProject = useCallback(() => {
+    setEditingProjectName(project.name);
+    setIsEditingProjectName(true);
+  }, [project.name]);
+
+  const handleCommitRenameProject = useCallback(() => {
+    const name = editingProjectName.trim();
+    const nextName = name || project.name;
+
+    if (nextName !== project.name) {
+      onProjectChange(renameProject(project, nextName));
+    }
+    setIsEditingProjectName(false);
+  }, [editingProjectName, onProjectChange, project]);
+
+  const handleCancelRenameProject = useCallback(() => {
+    setIsEditingProjectName(false);
+  }, []);
+
+  const handleProjectNameKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleCommitRenameProject();
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        handleCancelRenameProject();
+      }
+    },
+    [handleCommitRenameProject, handleCancelRenameProject],
+  );
 
   const handleDuplicateScreen = useCallback(
     (screen: Screen) => {
@@ -610,6 +680,67 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
     setSelectedElementId(null);
   }
 
+  function bringToFront(elementId: string) {
+    onProjectChange(
+      bringElementToFront(project, project.activeScreenId, elementId)
+    );
+  }
+
+  function bringForward(elementId: string) {
+    onProjectChange(
+      bringElementForward(project, project.activeScreenId, elementId)
+    );
+  }
+
+  function sendBackward(elementId: string) {
+    onProjectChange(
+      sendElementBackward(project, project.activeScreenId, elementId)
+    );
+  }
+
+  function sendToBack(elementId: string) {
+    onProjectChange(
+      sendElementToBack(project, project.activeScreenId, elementId)
+    );
+  }
+
+  function removeElement(elementId: string) {
+    onProjectChange(
+      removeElementFromScreen(project, project.activeScreenId, elementId),
+    );
+    if (selectedElementId === elementId) {
+      dragOriginalElementRef.current = null;
+      setDragPreviewElement(null);
+      setSelectedElementId(null);
+    }
+  }
+
+  const handleCanvasContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      elementId: null
+    });
+  }, []);
+
+  const handleElementContextMenu = useCallback((elementId: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setSelectedElementId(elementId);
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      elementId
+    });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu((prev) => prev.visible ? { ...prev, visible: false } : prev);
+  }, []);
+
   const clearSaveStatusTimeout = useCallback(() => {
     if (saveStatusTimeoutRef.current !== null) {
       window.clearTimeout(saveStatusTimeoutRef.current);
@@ -726,12 +857,38 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         event.preventDefault();
         setShowExportPanel(true);
         setCopyStatus("idle");
+        return;
+      }
+
+      if (shortcutKey === "b") {
+        event.preventDefault();
+        setShowLeftSidebar((show) => !show);
+        return;
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [saveProject, saveProjectAs]);
+
+  useEffect(() => {
+    function handleGlobalClick() {
+      closeContextMenu();
+    }
+
+    function handleGlobalKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeContextMenu();
+      }
+    }
+
+    window.addEventListener("click", handleGlobalClick);
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener("click", handleGlobalClick);
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, [closeContextMenu]);
 
   useEffect(() => {
     if (!hasUnsavedChanges) {
@@ -898,6 +1055,36 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
       }}
     >
       <div className="editor-toolbar" aria-label="Herramientas">
+        <div className="toolbar-group toolbar-group-project">
+          {isEditingProjectName ? (
+            <input
+              className="project-name-input"
+              value={editingProjectName}
+              onChange={(event) => setEditingProjectName(event.currentTarget.value)}
+              onBlur={handleCommitRenameProject}
+              onKeyDown={handleProjectNameKeyDown}
+              autoFocus
+            />
+          ) : (
+            <h1
+              className="project-name"
+              onDoubleClick={handleStartRenameProject}
+              title="Doble clic para renombrar"
+            >
+              {project.name}
+            </h1>
+          )}
+          {!isEditingProjectName && (
+            <button
+              type="button"
+              className="project-rename-btn"
+              aria-label="Renombrar proyecto"
+              onClick={handleStartRenameProject}
+            >
+              <Pencil size={12} />
+            </button>
+          )}
+        </div>
         <div className="toolbar-group">
           <button
             className={tool === "select" ? "active" : ""}
@@ -975,6 +1162,16 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
           >
             <Grid2x2 />
           </button>
+          <button
+            className={showLeftSidebar ? "active" : ""}
+            type="button"
+            aria-label="Barra lateral"
+            aria-pressed={showLeftSidebar}
+            data-tooltip="Barra lateral (Ctrl+B)"
+            onClick={() => setShowLeftSidebar((value) => !value)}
+          >
+            <Sidebar />
+          </button>
         </div>
         <div className={`toolbar-status toolbar-status-${saveState}`} aria-live="polite">
           {isSaving ? <span className="status-spinner" aria-hidden="true" /> : null}
@@ -1027,20 +1224,18 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
       />
       {imageImportError !== null ? <div className="tool-options-panel form-error">{imageImportError}</div> : null}
 
-      <ScreenListPanel
-        project={project}
-        editingScreenId={editingScreenId}
-        editingScreenName={editingScreenName}
-        onEditingScreenNameChange={setEditingScreenName}
-        onSelectScreen={handleSelectScreen}
-        onAddScreen={handleAddScreen}
-        onStartRenameScreen={handleStartRenameScreen}
-        onCommitRenameScreen={handleCommitRenameScreen}
-        onCancelRenameScreen={handleCancelRenameScreen}
-        onDuplicateScreen={handleDuplicateScreen}
-        onRemoveScreen={handleRemoveScreen}
-        onMoveScreen={handleMoveScreen}
-      />
+      {showLeftSidebar && (
+        <div className="left-sidebar">
+          <ElementListPanel
+            elements={activeScreen.elements}
+            selectedElementId={selectedElementId}
+            onSelectElement={setSelectedElementId}
+            onMoveElementForward={bringForward}
+            onMoveElementBackward={sendBackward}
+            onRemoveElement={removeElement}
+          />
+        </div>
+      )}
 
       {tool === "rect" || tool === "circle" ? (
         <div
@@ -1085,6 +1280,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         onPointerUp={endPan}
         onAuxClick={(event) => event.preventDefault()}
         onWheel={zoomViewport}
+        onContextMenu={handleCanvasContextMenu}
       >
         <div
           ref={artboardRef}
@@ -1093,18 +1289,118 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
             transform: `translate(${viewportOffset.x}px, ${viewportOffset.y}px) scale(${zoom})`,
           }}
         >
-          <ScreenPreview
-            device={project.device}
-            screen={activeScreen}
-            selectedElementId={selectedElementId}
-            draftElement={draftElement}
-            dragPreviewElement={dragPreviewElement}
-            showPixelGrid={showPixelGrid}
-            onPointerDown={handlePreviewPointerDown}
-            onPointerMove={handlePreviewPointerMove}
-            onPointerUp={handlePreviewPointerUp}
-            onElementPointerDown={tool === "select" ? handleElementPointerDown : undefined}
-          />
+          {project.screens.map((screen, index) => {
+            const isActive = screen.id === project.activeScreenId;
+            const cardW = project.device.width * 4;
+            const cardH = project.device.height * 4;
+            return (
+              <div
+                key={screen.id}
+                className={`screen-workspace-card${isActive ? " active" : ""}`}
+                style={{ width: cardW }}
+                onPointerDown={() => {
+                  if (!isActive) handleSelectScreen(screen.id);
+                }}
+              >
+                {/* Cabecera */}
+                <div className="screen-artboard-header">
+                  {editingScreenId === screen.id ? (
+                    <input
+                      className="screen-name-input screen-artboard-name-input"
+                      type="text"
+                      value={editingScreenName}
+                      autoFocus
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onChange={(e) => setEditingScreenName(e.currentTarget.value)}
+                      onBlur={() => handleCommitRenameScreen(screen)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); handleCommitRenameScreen(screen); }
+                        if (e.key === "Escape") { e.preventDefault(); handleCancelRenameScreen(); }
+                      }}
+                    />
+                  ) : (
+                    <span
+                      className="screen-artboard-name"
+                      title="Doble click para renombrar"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onDoubleClick={() => handleStartRenameScreen(screen)}
+                    >
+                      {screen.name}
+                    </span>
+                  )}
+                  <div className="screen-artboard-actions" onPointerDown={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      aria-label="Mover izquierda"
+                      title="Mover izquierda"
+                      disabled={index === 0}
+                      onClick={() => handleMoveScreen(screen.id, index - 1)}
+                    >
+                      <ChevronLeft size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Mover derecha"
+                      title="Mover derecha"
+                      disabled={index === project.screens.length - 1}
+                      onClick={() => handleMoveScreen(screen.id, index + 1)}
+                    >
+                      <ChevronRight size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Duplicar pantalla"
+                      title="Duplicar"
+                      onClick={() => handleDuplicateScreen(screen)}
+                    >
+                      <Copy size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Borrar pantalla"
+                      title="Borrar"
+                      className="danger-action"
+                      disabled={project.screens.length <= 1}
+                      onClick={() => handleRemoveScreen(screen)}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+                {/* Preview */}
+                <div className="screen-artboard-canvas" style={{ width: cardW, height: cardH }}>
+                  <ScreenPreview
+                    device={project.device}
+                    screen={screen}
+                    selectedElementId={isActive ? selectedElementId : null}
+                    draftElement={isActive ? draftElement : null}
+                    dragPreviewElement={isActive ? dragPreviewElement : null}
+                    showPixelGrid={isActive && showPixelGrid}
+                    onPointerDown={isActive ? handlePreviewPointerDown : undefined}
+                    onPointerMove={isActive ? handlePreviewPointerMove : undefined}
+                    onPointerUp={isActive ? handlePreviewPointerUp : undefined}
+                    onElementPointerDown={isActive && tool === "select" ? handleElementPointerDown : undefined}
+                    onElementContextMenu={isActive ? handleElementContextMenu : undefined}
+                  />
+                </div>
+              </div>
+            );
+          })}
+          {/* Tarjeta para añadir nueva pantalla */}
+          <div
+            className="screen-add-card"
+            style={{
+              width: project.device.width * 4,
+              height: project.device.height * 4,
+            }}
+            onClick={handleAddScreen}
+            title="Añadir nueva pantalla"
+          >
+            <div className="add-card-content">
+              <Plus size={28} />
+              <span>Nueva pantalla</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1375,6 +1671,94 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
           </section>
         </div>
       ) : null}
+
+      {contextMenu.visible && (
+        <div
+          className="context-menu"
+          style={{
+            position: "fixed",
+            top: contextMenu.y,
+            left: contextMenu.x,
+            zIndex: 100,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.elementId ? (
+            (() => {
+              const elementId = contextMenu.elementId;
+              const index = activeScreen.elements.findIndex((el) => el.id === elementId);
+              const isFirst = index === 0;
+              const isLast = index === activeScreen.elements.length - 1;
+
+              return (
+                <>
+                  <button
+                    type="button"
+                    disabled={isLast}
+                    onClick={() => {
+                      bringToFront(elementId);
+                      closeContextMenu();
+                    }}
+                  >
+                    <ChevronsUp size={14} /> Traer al frente
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isLast}
+                    onClick={() => {
+                      bringForward(elementId);
+                      closeContextMenu();
+                    }}
+                  >
+                    <ChevronUp size={14} /> Subir una capa
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isFirst}
+                    onClick={() => {
+                      sendBackward(elementId);
+                      closeContextMenu();
+                    }}
+                  >
+                    <ChevronDown size={14} /> Bajar una capa
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isFirst}
+                    onClick={() => {
+                      sendToBack(elementId);
+                      closeContextMenu();
+                    }}
+                  >
+                    <ChevronsDown size={14} /> Enviar al fondo
+                  </button>
+                  <div className="context-menu-divider" />
+                  <button
+                    type="button"
+                    className="danger-action"
+                    onClick={() => {
+                      removeElement(elementId);
+                      closeContextMenu();
+                    }}
+                  >
+                    <Trash2 size={14} /> Borrar
+                  </button>
+                </>
+              );
+            })()
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedElementId(null);
+                closeContextMenu();
+              }}
+            >
+              Deseleccionar todo
+            </button>
+          )}
+        </div>
+      )}
     </main>
   );
 }
