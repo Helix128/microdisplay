@@ -1,0 +1,138 @@
+.export-modal {
+  width: min(960px, calc(100vw - 2rem));
+  height: calc(100vh - 4rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 1.25rem;
+  background: #1a1a1a;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  animation: slide-up 200ms ease;
+}
+
+.export-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.export-modal-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.export-modal-header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  min-width: unset;
+  min-height: unset;
+  padding: 0.35rem;
+  flex-shrink: 0;
+}
+
+.export-modal-config {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.export-fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem 0.75rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.export-fieldset legend {
+  padding: 0 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.radio-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.radio-field input[type="radio"] {
+  width: auto;
+  cursor: pointer;
+}
+
+.export-instance-label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ccc;
+  min-width: 160px;
+}
+
+.export-modal .export-textarea {
+  flex: 1;
+  min-height: 24rem;
+  resize: none;
+}
+
+.export-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.confirm-exit-modal {
+  width: min(420px, 100%);
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 1.25rem;
+  background: #1a1a1a;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  animation: slide-up 200ms ease;
+}
+
+.confirm-exit-modal h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.confirm-exit-modal p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.confirm-exit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.confirm-exit-actions .toolbar-primary-action {
+  border-color: #5b5b5b;
+  background: #262626;
+}

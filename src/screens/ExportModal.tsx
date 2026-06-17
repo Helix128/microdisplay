@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import "./ExportModal.css";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import type { Project, Screen } from "../core";
 import { defaultExportConfig, generateProject, generateScreenFunction } from "../targets/u8g2";

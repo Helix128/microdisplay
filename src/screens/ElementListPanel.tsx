@@ -1,3 +1,4 @@
+import "./ElementListPanel.css";
 import {
   ChevronDown,
   ChevronUp,

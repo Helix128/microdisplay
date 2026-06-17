@@ -1,3 +1,4 @@
+import "./EditorScreen.css";
 import {
   ChevronDown,
   ChevronLeft,

@@ -1,4 +1,5 @@
 import { type FormEvent, memo, useCallback, useEffect, useState } from "react";
+import "./StartScreen.css";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { createProject, getFirstScreen, setFirstScreenActive, type Project } from "../core";
 import { ScreenPreview } from "../preview/ScreenPreview";

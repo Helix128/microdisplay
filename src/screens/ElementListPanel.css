@@ -1,0 +1,153 @@
+.element-list-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 0.75rem;
+  background: #1a1a1a;
+  overflow: hidden;
+}
+
+.element-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.element-list-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.element-count {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.element-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.element-list-empty {
+  font-size: 0.85rem;
+  color: #666;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.element-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #121212;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.element-list-item:hover {
+  background: #222;
+  border-color: #333;
+}
+
+.element-list-item.active {
+  background: #162636;
+  border-color: #007acc;
+}
+
+.element-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+}
+
+.element-list-item.active .element-item-icon {
+  color: #00aaff;
+}
+
+.element-item-meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.element-item-meta strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #eee;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.element-item-meta span {
+  font-size: 0.75rem;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.element-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  opacity: 0.3;
+  transition: opacity 0.15s;
+}
+
+.element-list-item:hover .element-item-actions,
+.element-list-item.active .element-item-actions {
+  opacity: 1;
+}
+
+.element-item-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  padding: 0.2rem;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.element-item-actions button:hover:not(:disabled) {
+  background: #2a2a2a;
+  color: #eee;
+  border-color: #444;
+}
+
+.element-item-actions button.danger-action:hover:not(:disabled) {
+  background: #3a1a1a;
+  color: #ff6b6b;
+  border-color: #633;
+}
+
+.element-item-actions button:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+  .element-list-panel {
+    display: none;
+  }
+}

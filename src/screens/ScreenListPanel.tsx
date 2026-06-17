@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp, Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import "./ScreenListPanel.css";
 import { type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { Project, Screen } from "../core";
 import { ScreenPreview } from "../preview/ScreenPreview";
