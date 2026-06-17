@@ -11,6 +11,7 @@
     "fs:allow-write-text-file",
     "fs:allow-mkdir",
     "fs:allow-remove",
+    "opener:default",
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "$HOME/**" }]

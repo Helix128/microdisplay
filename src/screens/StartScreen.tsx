@@ -1,6 +1,8 @@
-import { type FormEvent, memo, useCallback, useEffect, useState } from "react";
+import { type FormEvent, memo, useCallback, useEffect, useRef, useState } from "react";
 import "./StartScreen.css";
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, GitBranch, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import pkg from "../../package.json";
+import { openUrl } from "../platform/openUrl";
 import { createProject, getFirstScreen, setFirstScreenActive, type Project } from "../core";
 import { ScreenPreview } from "../preview/ScreenPreview";
 import { projectStorage, type StoredProject } from "../platform/projectStorage";
@@ -26,6 +28,7 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeMenuProjectId, setActiveMenuProjectId] = useState<string | null>(null);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   const [resolutionPreset, setResolutionPreset] = useState<string>(() => {
     const idx = PRESETS.findIndex((p) => p.width === 128 && p.height === 64);
@@ -191,6 +194,7 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
       <aside className="start-sidebar">
         <div className="start-brand">
           <h1>µDisplay Studio</h1>
+          <span className="start-version">v{pkg.version}</span>
         </div>
 
         <section className="start-create-panel">
@@ -264,6 +268,9 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
           <button className="secondary-button open-project-btn" type="button" onClick={openProject}>
             Abrir desde JSON…
           </button>
+          <button className="ghost-button about-btn" type="button" onClick={() => setIsAboutOpen(true)}>
+            Acerca de µDisplay Studio
+          </button>
           {error !== null ? <p className="error-message start-error">{error}</p> : null}
         </div>
       </aside>
@@ -309,7 +316,75 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
       {activeMenuProjectId !== null && (
         <div className="dropdown-backdrop" onClick={() => setActiveMenuProjectId(null)} />
       )}
+      {isAboutOpen && <AboutModal version={pkg.version} onClose={() => setIsAboutOpen(false)} />}
     </main>
+  );
+}
+
+function AboutModal({ version, onClose }: { version: string; onClose: () => void }) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="about-overlay"
+      ref={overlayRef}
+      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+    >
+      <div className="about-modal" role="dialog" aria-modal="true" aria-label="Acerca de µDisplay Studio">
+        <div className="about-modal-header">
+          <div className="about-modal-title">
+            <h2>µDisplay Studio</h2>
+            <span className="about-version">v{version}</span>
+          </div>
+          <button className="about-modal-close" type="button" onClick={onClose} aria-label="Cerrar">
+            ×
+          </button>
+        </div>
+
+        <p className="about-description">
+          Editor visual para diseñar interfaces OLED en microcontroladores.<br />
+          Exporta código U8G2 listo para usar.
+        </p>
+
+        <p className="about-byline">
+          Creado por{" "}
+          <button
+            type="button"
+            className="about-byline-link"
+            onClick={() => openUrl("https://github.com/Helix128")}
+          >
+            Diego M. · @Helix128
+          </button>
+        </p>
+
+        <div className="about-links">
+          <button
+            type="button"
+            className="about-link"
+            onClick={() => openUrl("https://studio.microdisplay.cl")}
+          >
+            <ExternalLink size={14} />
+            studio.microdisplay.cl
+          </button>
+          <button
+            type="button"
+            className="about-link"
+            onClick={() => openUrl("https://github.com/Helix128/microdisplay")}
+          >
+            <GitBranch size={14} />
+            github.com/Helix128/microdisplay
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
