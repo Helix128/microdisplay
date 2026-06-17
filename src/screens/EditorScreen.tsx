@@ -30,7 +30,6 @@ import {
   type ChangeEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent,
-  type WheelEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -180,6 +179,7 @@ export function EditorScreen({
   const viewportOffsetRef = useRef(viewportOffset);
   const panFrameRef = useRef<number | null>(null);
   const pendingViewportOffsetRef = useRef<Point | null>(null);
+  const viewportElRef = useRef<HTMLDivElement>(null);
   const latestProjectRef = useRef(project);
   const latestProjectJsonRef = useRef(JSON.stringify(project));
   const lastSavedProjectJsonRef = useRef(lastSavedProjectJson);
@@ -1063,16 +1063,27 @@ export function EditorScreen({
     };
   }, []);
 
-  const zoomViewport = useCallback((event: WheelEvent<HTMLDivElement>) => {
+  const handleWheel = useCallback((event: globalThis.WheelEvent) => {
     event.preventDefault();
 
     const artboard = artboardRef.current;
+    if (artboard === null) return;
 
-    if (artboard === null) {
+    if (!event.ctrlKey) {
+      // Trackpad two-finger scroll / mouse wheel without Ctrl → pan
+      const next = {
+        x: viewportOffsetRef.current.x - event.deltaX,
+        y: viewportOffsetRef.current.y - event.deltaY,
+      };
+      viewportOffsetRef.current = next;
+      setViewportOffset(next);
       return;
     }
 
-    const viewportRect = event.currentTarget.getBoundingClientRect();
+    // Ctrl+scroll or trackpad pinch → zoom
+    const viewportEl = viewportElRef.current;
+    if (viewportEl === null) return;
+    const viewportRect = viewportEl.getBoundingClientRect();
     const cursor = {
       x: event.clientX - viewportRect.left,
       y: event.clientY - viewportRect.top,
@@ -1081,27 +1092,32 @@ export function EditorScreen({
       x: artboard.offsetLeft,
       y: artboard.offsetTop,
     };
-    const nextZoom = clampZoom(zoom * (event.deltaY < 0 ? 1.1 : 0.9));
 
-    if (nextZoom === zoom) {
-      return;
-    }
+    setZoom((currentZoom) => {
+      const nextZoom = clampZoom(currentZoom * (event.deltaY < 0 ? 1.1 : 0.9));
+      if (nextZoom === currentZoom) return currentZoom;
 
-    const currentOffset = viewportOffsetRef.current;
-    const worldPoint = {
-      x: (cursor.x - artboardOrigin.x - currentOffset.x) / zoom,
-      y: (cursor.y - artboardOrigin.y - currentOffset.y) / zoom,
-    };
+      const currentOffset = viewportOffsetRef.current;
+      const worldPoint = {
+        x: (cursor.x - artboardOrigin.x - currentOffset.x) / currentZoom,
+        y: (cursor.y - artboardOrigin.y - currentOffset.y) / currentZoom,
+      };
+      const nextOffset = {
+        x: cursor.x - artboardOrigin.x - worldPoint.x * nextZoom,
+        y: cursor.y - artboardOrigin.y - worldPoint.y * nextZoom,
+      };
+      viewportOffsetRef.current = nextOffset;
+      setViewportOffset(nextOffset);
+      return nextZoom;
+    });
+  }, []);
 
-    const nextOffset = {
-      x: cursor.x - artboardOrigin.x - worldPoint.x * nextZoom,
-      y: cursor.y - artboardOrigin.y - worldPoint.y * nextZoom,
-    };
-
-    viewportOffsetRef.current = nextOffset;
-    setViewportOffset(nextOffset);
-    setZoom(nextZoom);
-  }, [zoom]);
+  useEffect(() => {
+    const el = viewportElRef.current;
+    if (el === null) return;
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [handleWheel]);
 
   return (
     <main
@@ -1301,12 +1317,12 @@ export function EditorScreen({
         </div>
 
       <div
+        ref={viewportElRef}
         className={`editor-viewport ${tool === "pan" || panStart !== null ? "is-panning" : ""}`}
         onPointerDownCapture={startPan}
         onPointerMove={movePan}
         onPointerUp={endPan}
         onAuxClick={(event) => event.preventDefault()}
-        onWheel={zoomViewport}
         onContextMenu={handleCanvasContextMenu}
       >
         <div
