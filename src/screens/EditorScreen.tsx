@@ -18,11 +18,13 @@ import {
   Pencil,
   Plus,
   RectangleHorizontal,
+  Redo2,
   SaveAll,
   Sidebar,
   Slash,
   Trash2,
   Type,
+  Undo2,
 } from "lucide-react";
 import {
   type ChangeEvent,
@@ -107,6 +109,10 @@ type EditorScreenProps = {
   project: Project;
   onExit: () => void;
   onProjectChange: (project: Project) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 };
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -121,7 +127,15 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenProps) {
+export function EditorScreen({
+  project,
+  onExit,
+  onProjectChange,
+  undo,
+  redo,
+  canUndo,
+  canRedo,
+}: EditorScreenProps) {
   const [tool, setTool] = useState<Tool>("select");
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState<Point | null>(null);
@@ -901,6 +915,22 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
         return;
       }
 
+      if (shortcutKey === "z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+        return;
+      }
+
+      if (shortcutKey === "y") {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
       if (shortcutKey === "e") {
         event.preventDefault();
         setShowExportPanel(true);
@@ -917,7 +947,7 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [saveProject, saveProjectAs]);
+  }, [saveProject, saveProjectAs, undo, redo]);
 
   useEffect(() => {
     function handleGlobalClick() {
@@ -1132,6 +1162,26 @@ export function EditorScreen({ project, onExit, onProjectChange }: EditorScreenP
               <Pencil size={12} />
             </button>
           )}
+        </div>
+        <div className="toolbar-group">
+          <button
+            type="button"
+            aria-label="Deshacer"
+            data-tooltip="Deshacer (Ctrl+Z)"
+            disabled={!canUndo}
+            onClick={undo}
+          >
+            <Undo2 />
+          </button>
+          <button
+            type="button"
+            aria-label="Rehacer"
+            data-tooltip="Rehacer (Ctrl+Y)"
+            disabled={!canRedo}
+            onClick={redo}
+          >
+            <Redo2 />
+          </button>
         </div>
         <div className="toolbar-group">
           <button
