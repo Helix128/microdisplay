@@ -406,6 +406,8 @@ input[type="checkbox"] {
 
 .editor-shell {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -413,10 +415,9 @@ input[type="checkbox"] {
 }
 
 .editor-toolbar {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  right: 1rem;
+  position: relative;
+  flex-shrink: 0;
+  margin: 0.75rem 0.75rem 0;
   z-index: 1000;
   display: flex;
   justify-content: space-between;
@@ -425,6 +426,12 @@ input[type="checkbox"] {
   border-radius: 6px;
   padding: 0.5rem;
   background: #1a1a1a;
+}
+
+.editor-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
 }
 
 .toolbar-group {
@@ -601,8 +608,7 @@ input[type="checkbox"] {
   padding: 0.45rem;
 }
 
-.toolbar-group button[data-tooltip]::after,
-.tool-options-panel button[data-tooltip]::after {
+.toolbar-group button[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
   top: calc(100% + 0.4rem);
@@ -627,17 +633,13 @@ input[type="checkbox"] {
 
 
 .editor-toolbar:has(button[data-tooltip]:hover),
-.editor-toolbar:has(button[data-tooltip]:focus-visible),
-.tool-options-panel:has(button[data-tooltip]:hover),
-.tool-options-panel:has(button[data-tooltip]:focus-visible) {
+.editor-toolbar:has(button[data-tooltip]:focus-visible) {
   z-index: 10000;
 }
 
 @media (hover: hover) {
   .toolbar-group button[data-tooltip]:hover::after,
-  .toolbar-group button[data-tooltip]:focus-visible::after,
-  .tool-options-panel button[data-tooltip]:hover::after,
-  .tool-options-panel button[data-tooltip]:focus-visible::after {
+  .toolbar-group button[data-tooltip]:focus-visible::after {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
     transition-delay: 180ms;
@@ -645,71 +647,129 @@ input[type="checkbox"] {
 }
 
 @media (hover: none) {
-  .toolbar-group button[data-tooltip]::after,
-  .tool-options-panel button[data-tooltip]::after {
+  .toolbar-group button[data-tooltip]::after {
     display: none;
   }
 }
 
-.tool-options-panel {
+.right-panel {
   position: absolute;
-  top: 4.75rem;
-  left: 17rem;
-  z-index: 1000;
+  right: 0.75rem;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 10;
+  width: 280px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: 1rem;
+  overflow-y: auto;
   border: 1px solid #333;
   border-radius: 6px;
   padding: 1rem;
   background: #1a1a1a;
 }
 
-.tool-options-actions {
+.right-panel h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.right-panel-header {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
 }
 
-.tool-options-panel button {
-  position: relative;
+.right-panel-header button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  min-width: 2.25rem;
-  min-height: 2.25rem;
-  padding: 0.45rem;
-  overflow: visible;
+  width: 2rem;
+  height: 2rem;
+  min-width: unset;
+  min-height: unset;
+  padding: 0.35rem;
+  flex-shrink: 0;
 }
 
-.tool-options-panel button.active {
+.right-panel-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.export-textarea {
+  width: 100%;
+  min-height: 12rem;
+  resize: vertical;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.75rem;
+  color: #eee;
+  background: #0b0b0b;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.tool-options-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.right-panel button.active {
   border-color: #6b6b6b;
   color: #ffffff;
   background: #2f2f2f;
 }
 
-.tool-options-panel button.active:hover,
-.tool-options-panel button.active:focus-visible {
+.right-panel button.active:hover,
+.right-panel button.active:focus-visible {
   border-color: #8a8a8a;
   background: #383838;
 }
 
-.tool-options-panel button svg {
-  width: 1rem;
-  height: 1rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.right-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.right-panel-section-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.right-panel-section button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+}
+
+.right-panel-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0;
 }
 
 .left-sidebar {
   position: absolute;
-  top: 4.75rem;
-  left: 1rem;
-  bottom: 1rem;
-  z-index: 20;
+  left: 0.75rem;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 10;
   width: 240px;
   display: flex;
   flex-direction: column;
@@ -1047,8 +1107,9 @@ input[type="checkbox"] {
 }
 
 .editor-viewport {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   overflow: hidden;
   cursor: crosshair;
 }
@@ -1217,52 +1278,11 @@ input[type="checkbox"] {
   letter-spacing: 0.03em;
 }
 
-.floating-inspector {
-  position: absolute;
-  top: 4.75rem;
-  right: 1rem;
-  z-index: 10;
-  width: 280px;
-  border: 1px solid #333;
-  border-radius: 6px;
-  padding: 1rem;
-  background: #1a1a1a;
-}
 
-.floating-inspector h2,
-.export-panel h2,
-.tool-options-panel h2 {
-  margin: 0 0 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.2;
-}
 
-.export-panel {
-  position: absolute;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 10;
-  width: min(620px, calc(100vw - 2rem));
-  border: 1px solid #333;
-  border-radius: 6px;
-  padding: 1rem;
-  background: #1a1a1a;
-}
 
-.export-panel textarea {
-  width: 100%;
-  min-height: 18rem;
-  resize: vertical;
-  border: 1px solid #333;
-  border-radius: 4px;
-  padding: 0.75rem;
-  color: #eee;
-  background: #0b0b0b;
-  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
+
+
 
 .export-actions {
   display: flex;
@@ -1279,6 +1299,110 @@ input[type="checkbox"] {
   place-items: center;
   padding: 1rem;
   background: rgba(0, 0, 0, 0.62);
+}
+
+.export-modal {
+  width: min(680px, 100%);
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 1.25rem;
+  background: #1a1a1a;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.export-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.export-modal-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.export-modal-header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  min-width: unset;
+  min-height: unset;
+  padding: 0.35rem;
+  flex-shrink: 0;
+}
+
+.export-modal-config {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.export-fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem 0.75rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.export-fieldset legend {
+  padding: 0 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.radio-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.radio-field input[type="radio"] {
+  width: auto;
+  cursor: pointer;
+}
+
+.export-instance-label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ccc;
+  min-width: 160px;
+}
+
+.export-modal .export-textarea {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+}
+
+.export-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .confirm-exit-modal {
@@ -1320,7 +1444,7 @@ input[type="checkbox"] {
 }
 
 .editor-form label,
-.floating-inspector label {
+.right-panel label {
   display: grid;
   gap: 0.35rem;
   color: #ccc;
@@ -1439,6 +1563,9 @@ input[type="checkbox"] {
   .left-sidebar {
     width: 210px;
   }
+  .right-panel {
+    width: 240px;
+  }
 }
 
 @media (max-width: 700px) {
@@ -1457,28 +1584,25 @@ input[type="checkbox"] {
   }
 
   .left-sidebar {
-    top: auto;
-    right: 1rem;
-    bottom: 1rem;
-    left: 1rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    top: 0.5rem;
+    bottom: auto;
     width: auto;
-    max-height: 230px;
     flex-direction: row;
+    max-height: 160px;
   }
 
   .element-list-panel {
     display: none;
   }
 
-  .tool-options-panel {
-    left: 1rem;
-  }
-
-  .floating-inspector {
+  .right-panel {
+    left: 0.5rem;
+    right: 0.5rem;
     top: auto;
-    right: 1rem;
-    bottom: 15.5rem;
-    left: 1rem;
+    bottom: 0.5rem;
     width: auto;
+    max-height: 280px;
   }
 }

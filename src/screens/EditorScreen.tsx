@@ -20,7 +20,6 @@ import {
   RectangleHorizontal,
   Redo2,
   SaveAll,
-  Sidebar,
   Slash,
   Trash2,
   Type,
@@ -76,7 +75,7 @@ import {
   type Point,
   ScreenPreview,
 } from "../preview/ScreenPreview";
-import { u8g2 } from "../exporters";
+import { ExportModal } from "./ExportModal";
 import {
   defaultU8g2FontName,
   getCharsetLabel,
@@ -95,7 +94,6 @@ import { ElementListPanel } from "./ElementListPanel";
 
 type Tool = "select" | "pan" | "rect" | "circle" | "line" | "text" | "image";
 
-type CopyStatus = "idle" | "copied";
 type SaveState = "idle" | "saved" | "dirty" | "saving" | "error";
 type SaveMode = "save" | "saveAs";
 
@@ -155,9 +153,7 @@ export function EditorScreen({
   const [panStart, setPanStart] = useState<Point | null>(null);
   const [panOrigin, setPanOrigin] = useState<Point | null>(null);
   const [showExportPanel, setShowExportPanel] = useState(false);
-  const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
   const [showPixelGrid, setShowPixelGrid] = useState(true);
-  const [showLeftSidebar, setShowLeftSidebar] = useState(true);
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;
@@ -225,11 +221,6 @@ export function EditorScreen({
     () => getDraftElement(tool, dragStart, dragCurrent, rectFilled, textContent, textFont),
     [tool, dragStart, dragCurrent, rectFilled, textContent, textFont],
   );
-  const exportCode = useMemo(
-    () => (showExportPanel ? u8g2.generateProject(project) : ""),
-    [project, showExportPanel],
-  );
-
   const resetEditorInteractionState = useCallback(() => {
     setSelectedElementId(null);
     setDragStart(null);
@@ -886,11 +877,6 @@ export function EditorScreen({
   const saveProject = useCallback(() => saveProjectWithStatus("save"), [saveProjectWithStatus]);
   const saveProjectAs = useCallback(() => saveProjectWithStatus("saveAs"), [saveProjectWithStatus]);
 
-  const copyExportCode = useCallback(async () => {
-    await navigator.clipboard.writeText(exportCode);
-    setCopyStatus("copied");
-  }, [exportCode]);
-
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (isEditableTarget(event.target)) {
@@ -934,15 +920,9 @@ export function EditorScreen({
       if (shortcutKey === "e") {
         event.preventDefault();
         setShowExportPanel(true);
-        setCopyStatus("idle");
         return;
       }
 
-      if (shortcutKey === "b") {
-        event.preventDefault();
-        setShowLeftSidebar((show) => !show);
-        return;
-      }
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -1260,16 +1240,6 @@ export function EditorScreen({
           >
             <Grid2x2 />
           </button>
-          <button
-            className={showLeftSidebar ? "active" : ""}
-            type="button"
-            aria-label="Barra lateral"
-            aria-pressed={showLeftSidebar}
-            data-tooltip="Barra lateral (Ctrl+B)"
-            onClick={() => setShowLeftSidebar((value) => !value)}
-          >
-            <Sidebar />
-          </button>
         </div>
         <div className={`toolbar-status toolbar-status-${saveState}`} aria-live="polite">
           {isSaving ? <span className="status-spinner" aria-hidden="true" /> : null}
@@ -1303,10 +1273,7 @@ export function EditorScreen({
             type="button"
             aria-label="Exportar"
             data-tooltip="Exportar"
-            onClick={() => {
-              setShowExportPanel(true);
-              setCopyStatus("idle");
-            }}
+            onClick={() => setShowExportPanel(true)}
           >
             <Download />
           </button>
@@ -1320,9 +1287,7 @@ export function EditorScreen({
         hidden
         onChange={handleImageFileChange}
       />
-      {imageImportError !== null ? <div className="tool-options-panel form-error">{imageImportError}</div> : null}
-
-      {showLeftSidebar && (
+      <div className="editor-body">
         <div className="left-sidebar">
           <ElementListPanel
             elements={activeScreen.elements}
@@ -1333,43 +1298,6 @@ export function EditorScreen({
             onRemoveElement={removeElement}
           />
         </div>
-      )}
-
-      {tool === "rect" || tool === "circle" ? (
-        <div
-          className="tool-options-panel"
-          aria-label={tool === "rect" ? "Opciones de rectángulo" : "Opciones de círculo"}
-        >
-          <h2>Opciones</h2>
-          <button
-            className={rectFilled ? "active" : ""}
-            type="button"
-            aria-label={tool === "rect" ? "Rectángulos rellenos" : "Círculos rellenos"}
-            aria-pressed={rectFilled}
-            data-tooltip="Relleno"
-            onClick={() => setRectFilled((value) => !value)}
-          >
-            <PaintBucket />
-          </button>
-        </div>
-      ) : null}
-
-      {tool === "text" ? (
-        <div className="tool-options-panel tool-options-panel-wide" aria-label="Opciones de texto">
-          <h2>Opciones</h2>
-          <div className="editor-form">
-            <label>
-              Contenido
-              <input
-                type="text"
-                value={textContent}
-                onChange={(event) => setTextContent(event.currentTarget.value)}
-              />
-            </label>
-            <TextFontFields font={textFont} onChange={setTextFont} />
-          </div>
-        </div>
-      ) : null}
 
       <div
         className={`editor-viewport ${tool === "pan" || panStart !== null ? "is-panning" : ""}`}
@@ -1503,239 +1431,276 @@ export function EditorScreen({
         </div>
       </div>
 
-      {selectedElement !== null ? (
-        <aside className="floating-inspector">
-          <h2>{getElementLabel(selectedElement)}</h2>
-          {selectedElement.type === "rect" ? (
+      <aside className="right-panel">
+        {imageImportError !== null ? (
+          <p className="form-error">{imageImportError}</p>
+        ) : null}
+
+        {(tool === "rect" || tool === "circle") ? (
+          <section className="right-panel-section">
+            <h3 className="right-panel-section-title">Herramienta</h3>
+            <button
+              className={rectFilled ? "active" : ""}
+              type="button"
+              aria-label={tool === "rect" ? "Rectángulos rellenos" : "Círculos rellenos"}
+              aria-pressed={rectFilled}
+              onClick={() => setRectFilled((value) => !value)}
+            >
+              <PaintBucket size={16} />
+              {rectFilled ? "Relleno" : "Sin relleno"}
+            </button>
+          </section>
+        ) : (tool === "text" && selectedElement === null) ? (
+          <section className="right-panel-section">
+            <h3 className="right-panel-section-title">Herramienta</h3>
             <div className="editor-form">
-              <div className="field-grid">
-                <NumberField
-                  label="X"
-                  value={selectedElement.x}
-                  onChange={(x) => updateSelectedElement({ ...selectedElement, x })}
-                />
-                <NumberField
-                  label="Y"
-                  value={selectedElement.y}
-                  onChange={(y) => updateSelectedElement({ ...selectedElement, y })}
-                />
-                <NumberField
-                  label="Ancho"
-                  value={selectedElement.width}
-                  onChange={(width) =>
-                    updateSelectedElement({ ...selectedElement, width })
-                  }
-                />
-                <NumberField
-                  label="Alto"
-                  value={selectedElement.height}
-                  onChange={(height) =>
-                    updateSelectedElement({ ...selectedElement, height })
-                  }
-                />
-              </div>
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={selectedElement.filled}
-                  onChange={(event) =>
-                    updateSelectedElement({
-                      ...selectedElement,
-                      filled: event.currentTarget.checked,
-                    })
-                  }
-                />
-                Relleno
-              </label>
-            </div>
-          ) : selectedElement.type === "circle" ? (
-            <div className="editor-form">
-              <div className="field-grid">
-                <NumberField
-                  label="X"
-                  value={selectedElement.x}
-                  onChange={(x) => updateSelectedElement({ ...selectedElement, x })}
-                />
-                <NumberField
-                  label="Y"
-                  value={selectedElement.y}
-                  onChange={(y) => updateSelectedElement({ ...selectedElement, y })}
-                />
-                <NumberField
-                  label="Radio"
-                  value={selectedElement.radius}
-                  onChange={(radius) => updateSelectedElement({ ...selectedElement, radius })}
-                />
-              </div>
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={selectedElement.filled}
-                  onChange={(event) =>
-                    updateSelectedElement({
-                      ...selectedElement,
-                      filled: event.currentTarget.checked,
-                    })
-                  }
-                />
-                Relleno
-              </label>
-            </div>
-          ) : selectedElement.type === "line" ? (
-            <div className="field-grid">
-              <NumberField
-                label="X1"
-                value={selectedElement.x1}
-                onChange={(x1) => updateSelectedElement({ ...selectedElement, x1 })}
-              />
-              <NumberField
-                label="Y1"
-                value={selectedElement.y1}
-                onChange={(y1) => updateSelectedElement({ ...selectedElement, y1 })}
-              />
-              <NumberField
-                label="X2"
-                value={selectedElement.x2}
-                onChange={(x2) => updateSelectedElement({ ...selectedElement, x2 })}
-              />
-              <NumberField
-                label="Y2"
-                value={selectedElement.y2}
-                onChange={(y2) => updateSelectedElement({ ...selectedElement, y2 })}
-              />
-            </div>
-          ) : selectedElement.type === "image" ? (
-            <div className="editor-form">
-              <div className="field-grid">
-                <NumberField
-                  label="X"
-                  value={selectedElement.x}
-                  onChange={(x) => updateImageElement(selectedElement, { x })}
-                />
-                <NumberField
-                  label="Y"
-                  value={selectedElement.y}
-                  onChange={(y) => updateImageElement(selectedElement, { y })}
-                />
-                <NumberField
-                  label="Ancho"
-                  value={selectedElement.width}
-                  onChange={(width) => updateImageElement(selectedElement, { width: clampImageSize(width) })}
-                />
-                <NumberField
-                  label="Alto"
-                  value={selectedElement.height}
-                  onChange={(height) => updateImageElement(selectedElement, { height: clampImageSize(height) })}
-                />
-              </div>
-              {selectedElement.ditherMode === "floyd-steinberg" ? (
-                <BrightnessField
-                  value={selectedElement.brightness}
-                  onChange={(brightness) => updateImageElement(selectedElement, { brightness })}
-                />
-              ) : (
-                <ThresholdField
-                  value={selectedElement.threshold}
-                  onChange={(threshold) => updateImageElement(selectedElement, { threshold })}
-                />
-              )}
-              <label>
-                Dithering
-                <select
-                  value={selectedElement.ditherMode}
-                  onChange={(event) => updateImageElement(selectedElement, { ditherMode: event.currentTarget.value as DitherMode })}
-                >
-                  {ditherModes.map((mode) => (
-                    <option key={mode} value={mode}>{getDitherModeLabel(mode)}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Proporción
-                <select
-                  value={selectedElement.resizeMode}
-                  onChange={(event) => updateImageElement(selectedElement, { resizeMode: event.currentTarget.value as ResizeMode })}
-                >
-                  {resizeModes.map((mode) => (
-                    <option key={mode} value={mode}>{getResizeModeLabel(mode)}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={selectedElement.invert}
-                  onChange={(event) => updateImageElement(selectedElement, { invert: event.currentTarget.checked })}
-                />
-                Invertir
-              </label>
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={selectedElement.cropToScreen}
-                  onChange={(event) => updateImageElement(selectedElement, { cropToScreen: event.currentTarget.checked })}
-                />
-                Borrar zonas fuera de pantalla al exportar
-              </label>
-              <div className="tool-options-actions">
-                <button type="button" onClick={() => updateImageElement(selectedElement, getCenteredImagePosition(selectedElement, project.device))}>
-                  Centrar
-                </button>
-                <button type="button" onClick={() => updateImageElement(selectedElement, getHalfScreenImageSize(selectedElement, project.device))}>
-                  Ajustar 50%
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="editor-form">
-              <div className="field-grid">
-                <NumberField
-                  label="X"
-                  value={selectedElement.x}
-                  onChange={(x) => updateSelectedElement({ ...selectedElement, x })}
-                />
-                <NumberField
-                  label="Y"
-                  value={selectedElement.y}
-                  onChange={(y) => updateSelectedElement({ ...selectedElement, y })}
-                />
-              </div>
               <label>
                 Contenido
                 <input
                   type="text"
-                  value={selectedElement.text}
-                  onChange={(event) =>
-                    updateSelectedElement({ ...selectedElement, text: event.currentTarget.value })
-                  }
+                  value={textContent}
+                  onChange={(event) => setTextContent(event.currentTarget.value)}
                 />
               </label>
-              <TextFontFields
-                font={selectedElement.font}
-                onChange={(font) => updateSelectedElement({ ...selectedElement, font })}
-              />
+              <TextFontFields font={textFont} onChange={setTextFont} />
             </div>
-          )}
-          <button className="danger-button" type="button" onClick={removeSelectedElement}>
-            Borrar
-          </button>
-        </aside>
-      ) : null}
+          </section>
+        ) : null}
 
-      {showExportPanel ? (
-        <aside className="export-panel">
-          <h2>Código U8G2</h2>
-          <textarea readOnly value={exportCode} />
-          <div className="export-actions">
-            <button type="button" onClick={copyExportCode}>
-              {copyStatus === "copied" ? "Copiado" : "Copiar"}
+        {(tool === "rect" || tool === "circle") && selectedElement !== null ? (
+          <hr className="right-panel-divider" />
+        ) : null}
+
+        {selectedElement !== null ? (
+          <section className="right-panel-section">
+            <h3 className="right-panel-section-title">Elemento</h3>
+            {selectedElement.type === "rect" ? (
+              <div className="editor-form">
+                <div className="field-grid">
+                  <NumberField
+                    label="X"
+                    value={selectedElement.x}
+                    onChange={(x) => updateSelectedElement({ ...selectedElement, x })}
+                  />
+                  <NumberField
+                    label="Y"
+                    value={selectedElement.y}
+                    onChange={(y) => updateSelectedElement({ ...selectedElement, y })}
+                  />
+                  <NumberField
+                    label="Ancho"
+                    value={selectedElement.width}
+                    onChange={(width) =>
+                      updateSelectedElement({ ...selectedElement, width })
+                    }
+                  />
+                  <NumberField
+                    label="Alto"
+                    value={selectedElement.height}
+                    onChange={(height) =>
+                      updateSelectedElement({ ...selectedElement, height })
+                    }
+                  />
+                </div>
+                <label className="checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={selectedElement.filled}
+                    onChange={(event) =>
+                      updateSelectedElement({
+                        ...selectedElement,
+                        filled: event.currentTarget.checked,
+                      })
+                    }
+                  />
+                  Relleno
+                </label>
+              </div>
+            ) : selectedElement.type === "circle" ? (
+              <div className="editor-form">
+                <div className="field-grid">
+                  <NumberField
+                    label="X"
+                    value={selectedElement.x}
+                    onChange={(x) => updateSelectedElement({ ...selectedElement, x })}
+                  />
+                  <NumberField
+                    label="Y"
+                    value={selectedElement.y}
+                    onChange={(y) => updateSelectedElement({ ...selectedElement, y })}
+                  />
+                  <NumberField
+                    label="Radio"
+                    value={selectedElement.radius}
+                    onChange={(radius) => updateSelectedElement({ ...selectedElement, radius })}
+                  />
+                </div>
+                <label className="checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={selectedElement.filled}
+                    onChange={(event) =>
+                      updateSelectedElement({
+                        ...selectedElement,
+                        filled: event.currentTarget.checked,
+                      })
+                    }
+                  />
+                  Relleno
+                </label>
+              </div>
+            ) : selectedElement.type === "line" ? (
+              <div className="field-grid">
+                <NumberField
+                  label="X1"
+                  value={selectedElement.x1}
+                  onChange={(x1) => updateSelectedElement({ ...selectedElement, x1 })}
+                />
+                <NumberField
+                  label="Y1"
+                  value={selectedElement.y1}
+                  onChange={(y1) => updateSelectedElement({ ...selectedElement, y1 })}
+                />
+                <NumberField
+                  label="X2"
+                  value={selectedElement.x2}
+                  onChange={(x2) => updateSelectedElement({ ...selectedElement, x2 })}
+                />
+                <NumberField
+                  label="Y2"
+                  value={selectedElement.y2}
+                  onChange={(y2) => updateSelectedElement({ ...selectedElement, y2 })}
+                />
+              </div>
+            ) : selectedElement.type === "image" ? (
+              <div className="editor-form">
+                <div className="field-grid">
+                  <NumberField
+                    label="X"
+                    value={selectedElement.x}
+                    onChange={(x) => updateImageElement(selectedElement, { x })}
+                  />
+                  <NumberField
+                    label="Y"
+                    value={selectedElement.y}
+                    onChange={(y) => updateImageElement(selectedElement, { y })}
+                  />
+                  <NumberField
+                    label="Ancho"
+                    value={selectedElement.width}
+                    onChange={(width) => updateImageElement(selectedElement, { width: clampImageSize(width) })}
+                  />
+                  <NumberField
+                    label="Alto"
+                    value={selectedElement.height}
+                    onChange={(height) => updateImageElement(selectedElement, { height: clampImageSize(height) })}
+                  />
+                </div>
+                {selectedElement.ditherMode === "floyd-steinberg" ? (
+                  <BrightnessField
+                    value={selectedElement.brightness}
+                    onChange={(brightness) => updateImageElement(selectedElement, { brightness })}
+                  />
+                ) : (
+                  <ThresholdField
+                    value={selectedElement.threshold}
+                    onChange={(threshold) => updateImageElement(selectedElement, { threshold })}
+                  />
+                )}
+                <label>
+                  Dithering
+                  <select
+                    value={selectedElement.ditherMode}
+                    onChange={(event) => updateImageElement(selectedElement, { ditherMode: event.currentTarget.value as DitherMode })}
+                  >
+                    {ditherModes.map((mode) => (
+                      <option key={mode} value={mode}>{getDitherModeLabel(mode)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Proporción
+                  <select
+                    value={selectedElement.resizeMode}
+                    onChange={(event) => updateImageElement(selectedElement, { resizeMode: event.currentTarget.value as ResizeMode })}
+                  >
+                    {resizeModes.map((mode) => (
+                      <option key={mode} value={mode}>{getResizeModeLabel(mode)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={selectedElement.invert}
+                    onChange={(event) => updateImageElement(selectedElement, { invert: event.currentTarget.checked })}
+                  />
+                  Invertir
+                </label>
+                <label className="checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={selectedElement.cropToScreen}
+                    onChange={(event) => updateImageElement(selectedElement, { cropToScreen: event.currentTarget.checked })}
+                  />
+                  Borrar zonas fuera de pantalla al exportar
+                </label>
+                <div className="tool-options-actions">
+                  <button type="button" onClick={() => updateImageElement(selectedElement, getCenteredImagePosition(selectedElement, project.device))}>
+                    Centrar
+                  </button>
+                  <button type="button" onClick={() => updateImageElement(selectedElement, getHalfScreenImageSize(selectedElement, project.device))}>
+                    Ajustar 50%
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="editor-form">
+                <div className="field-grid">
+                  <NumberField
+                    label="X"
+                    value={selectedElement.x}
+                    onChange={(x) => updateSelectedElement({ ...selectedElement, x })}
+                  />
+                  <NumberField
+                    label="Y"
+                    value={selectedElement.y}
+                    onChange={(y) => updateSelectedElement({ ...selectedElement, y })}
+                  />
+                </div>
+                <label>
+                  Contenido
+                  <input
+                    type="text"
+                    value={selectedElement.text}
+                    onChange={(event) =>
+                      updateSelectedElement({ ...selectedElement, text: event.currentTarget.value })
+                    }
+                  />
+                </label>
+                <TextFontFields
+                  font={selectedElement.font}
+                  onChange={(font) => updateSelectedElement({ ...selectedElement, font })}
+                />
+              </div>
+            )}
+            <button className="danger-button" type="button" onClick={removeSelectedElement}>
+              Borrar
             </button>
-            <button type="button" onClick={() => setShowExportPanel(false)}>
-              Cerrar
-            </button>
-          </div>
-        </aside>
-      ) : null}
+          </section>
+        ) : selectedElement === null && tool !== "rect" && tool !== "circle" && tool !== "text" ? (
+          <p className="right-panel-empty">Selecciona un elemento para editar sus propiedades.</p>
+        ) : null}
+      </aside>
+      </div>
+
+      {showExportPanel && (
+        <ExportModal
+          project={project}
+          activeScreen={activeScreen}
+          onClose={() => setShowExportPanel(false)}
+        />
+      )}
 
       {showExitConfirmation ? (
         <div className="modal-backdrop" role="presentation">
@@ -2030,21 +1995,6 @@ function BrightnessField({ value, onChange }: { value: number; onChange: (value:
       </div>
     </label>
   );
-}
-
-function getElementLabel(element: DesignElement): string {
-  switch (element.type) {
-    case "rect":
-      return "Rectángulo";
-    case "circle":
-      return "Círculo";
-    case "line":
-      return "Línea";
-    case "text":
-      return "Texto";
-    case "image":
-      return "Imagen";
-  }
 }
 
 function getDraftElement(

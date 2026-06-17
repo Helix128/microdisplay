@@ -1,18 +1,43 @@
 import { cropBitmap, decodeXbmBase64Bitmap } from "../../core";
 import type { DesignElement, DeviceConfig, Project, Screen } from "../../core";
 
-export function generateScreen(screen: Screen): string {
-  const context: GenerateContext = { usedBitmapNames: new Set<string>() };
+export type ExportConfig = {
+  instanceName: string;
+};
+
+export const defaultExportConfig: ExportConfig = {
+  instanceName: "u8g2",
+};
+
+export function generateScreen(screen: Screen, config: ExportConfig = defaultExportConfig): string {
+  const context: GenerateContext = { usedBitmapNames: new Set<string>(), instanceName: config.instanceName };
   return screen.elements.map((element) => generateElement(element, context)).join("\n");
 }
 
-export function generateProject(project: Project): string {
+export function generateScreenFunction(screen: Screen, project: Project, config: ExportConfig = defaultExportConfig): string {
+  const functionName = toFunctionName(screen.name, new Set<string>());
+  const context: GenerateContext = { usedBitmapNames: new Set<string>(), device: project.device, instanceName: config.instanceName };
+  const body = screen.elements.map((element) => generateElement(element, context)).join("\n");
+
+  if (!body) {
+    return `void ${functionName}() {\n}`;
+  }
+
+  const indentedBody = body
+    .split("\n")
+    .map((line) => `  ${line}`)
+    .join("\n");
+
+  return `void ${functionName}() {\n${indentedBody}\n}`;
+}
+
+export function generateProject(project: Project, config: ExportConfig = defaultExportConfig): string {
   const usedNames = new Set<string>();
 
   return project.screens
     .map((screen) => {
       const functionName = toFunctionName(screen.name, usedNames);
-      const context: GenerateContext = { usedBitmapNames: new Set<string>(), device: project.device };
+      const context: GenerateContext = { usedBitmapNames: new Set<string>(), device: project.device, instanceName: config.instanceName };
       const body = screen.elements.map((element) => generateElement(element, context)).join("\n");
 
       if (!body) {
@@ -32,26 +57,28 @@ export function generateProject(project: Project): string {
 type GenerateContext = {
   usedBitmapNames: Set<string>;
   device?: DeviceConfig;
+  instanceName: string;
 };
 
 function generateElement(element: DesignElement, context: GenerateContext): string {
+  const obj = context.instanceName;
   switch (element.type) {
     case "rect":
       return element.filled
-        ? `u8g2.drawBox(${element.x}, ${element.y}, ${element.width}, ${element.height});`
-        : `u8g2.drawFrame(${element.x}, ${element.y}, ${element.width}, ${element.height});`;
+        ? `${obj}.drawBox(${element.x}, ${element.y}, ${element.width}, ${element.height});`
+        : `${obj}.drawFrame(${element.x}, ${element.y}, ${element.width}, ${element.height});`;
     case "circle":
       return element.filled
-        ? `u8g2.drawDisc(${element.x}, ${element.y}, ${element.radius}, U8G2_DRAW_ALL);`
-        : `u8g2.drawCircle(${element.x}, ${element.y}, ${element.radius}, U8G2_DRAW_ALL);`;
+        ? `${obj}.drawDisc(${element.x}, ${element.y}, ${element.radius}, U8G2_DRAW_ALL);`
+        : `${obj}.drawCircle(${element.x}, ${element.y}, ${element.radius}, U8G2_DRAW_ALL);`;
     case "line":
-      return `u8g2.drawLine(${element.x1}, ${element.y1}, ${element.x2}, ${element.y2});`;
+      return `${obj}.drawLine(${element.x1}, ${element.y1}, ${element.x2}, ${element.y2});`;
     case "text": {
       const drawFunction = requiresUtf8(element.text) ? "drawUTF8" : "drawStr";
 
       return [
-        `u8g2.setFont(${element.font});`,
-        `u8g2.${drawFunction}(${element.x}, ${element.y}, "${escapeCppString(element.text)}");`,
+        `${obj}.setFont(${element.font});`,
+        `${obj}.${drawFunction}(${element.x}, ${element.y}, "${escapeCppString(element.text)}");`,
       ].join("\n");
     }
     case "image": {
@@ -66,7 +93,7 @@ function generateElement(element: DesignElement, context: GenerateContext): stri
         `static const unsigned char ${bitmapName}[] PROGMEM = {`,
         `  ${formatBytes(exportedImage.bytes)}`,
         `};`,
-        `u8g2.drawXBMP(${exportedImage.x}, ${exportedImage.y}, ${exportedImage.width}, ${exportedImage.height}, ${bitmapName});`,
+        `${obj}.drawXBMP(${exportedImage.x}, ${exportedImage.y}, ${exportedImage.width}, ${exportedImage.height}, ${bitmapName});`,
       ].join("\n");
     }
   }
