@@ -606,7 +606,7 @@ export function EditorScreen({
   );
 
   const updateImageElement = useCallback(
-    (element: ImageElement, changes: Partial<Pick<ImageElement, "x" | "y" | "width" | "height" | "threshold" | "brightness" | "invert" | "ditherMode" | "resizeMode" | "cropToScreen">>) => {
+    (element: ImageElement, changes: Partial<Pick<ImageElement, "name" | "x" | "y" | "width" | "height" | "threshold" | "brightness" | "invert" | "ditherMode" | "resizeMode" | "cropToScreen">>) => {
       const nextElement = applyImageChanges(element, changes);
 
       if (
@@ -1575,6 +1575,19 @@ export function EditorScreen({
               </div>
             ) : selectedElement.type === "image" ? (
               <div className="editor-form">
+                <label>
+                  Nombre
+                  <input
+                    type="text"
+                    value={selectedElement.name ?? ""}
+                    placeholder={selectedElement.id.replace(/[^a-zA-Z0-9_]+/g, "_")}
+                    spellCheck={false}
+                    onChange={(event) => {
+                      const sanitized = event.currentTarget.value.replace(/[^a-zA-Z0-9_]/g, "");
+                      updateImageElement(selectedElement, { name: sanitized || undefined });
+                    }}
+                  />
+                </label>
                 <div className="field-grid">
                   <NumberField
                     label="X"
@@ -2144,7 +2157,7 @@ function cloneElementWithNewId(element: DesignElement): DesignElement {
 
 function applyImageChanges(
   element: ImageElement,
-  changes: Partial<Pick<ImageElement, "x" | "y" | "width" | "height" | "threshold" | "brightness" | "invert" | "ditherMode" | "resizeMode" | "cropToScreen">>,
+  changes: Partial<Pick<ImageElement, "name" | "x" | "y" | "width" | "height" | "threshold" | "brightness" | "invert" | "ditherMode" | "resizeMode" | "cropToScreen">>,
 ): ImageElement {
   const nextElement = { ...element, ...changes };
   const sourceSize = { width: element.sourceWidth, height: element.sourceHeight };

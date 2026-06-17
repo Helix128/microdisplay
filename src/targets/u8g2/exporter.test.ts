@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Project, Screen } from "../../core";
-import { generateProject, generateScreen } from "./index";
+import { generateProject, generateScreen, generateScreenFunction } from "./index";
 
 const emptyScreen: Screen = {
   id: "screen-1",
@@ -196,9 +196,60 @@ describe("generateScreen", () => {
       ],
     };
 
-    expect(generateProject(project)).toContain(
-      "static const unsigned char image_logo_1[] PROGMEM = {\n    0x3f\n  };\n  u8g2.drawXBMP(0, 0, 8, 1, image_logo_1);",
+    const output = generateProject(project);
+    expect(output).toContain("static const unsigned char image_logo_1[] PROGMEM = {\n  0x3f\n};");
+    expect(output).toContain("u8g2.drawXBMP(0, 0, 8, 1, image_logo_1);");
+    expect(output.indexOf("static const")).toBeLessThan(output.indexOf("void "));
+  });
+
+  it("does not emit setFont when font is already active", () => {
+    const screen: Screen = {
+      id: "screen-1",
+      name: "Main Screen",
+      elements: [
+        { id: "t1", type: "text", x: 0, y: 10, text: "Hello", font: "u8g2_font_6x10_tf" },
+        { id: "t2", type: "text", x: 0, y: 20, text: "World", font: "u8g2_font_6x10_tf" },
+      ],
+    };
+
+    expect(generateScreen(screen)).toBe(
+      "u8g2.setFont(u8g2_font_6x10_tf);\nu8g2.drawStr(0, 10, \"Hello\");\nu8g2.drawStr(0, 20, \"World\");",
     );
+  });
+
+  it("emits setFont again when font changes", () => {
+    const screen: Screen = {
+      id: "screen-1",
+      name: "Main Screen",
+      elements: [
+        { id: "t1", type: "text", x: 0, y: 10, text: "Hello", font: "u8g2_font_6x10_tf" },
+        { id: "t2", type: "text", x: 0, y: 20, text: "World", font: "u8g2_font_5x7_tf" },
+        { id: "t3", type: "text", x: 0, y: 30, text: "Back", font: "u8g2_font_6x10_tf" },
+      ],
+    };
+
+    expect(generateScreen(screen)).toBe(
+      [
+        "u8g2.setFont(u8g2_font_6x10_tf);",
+        "u8g2.drawStr(0, 10, \"Hello\");",
+        "u8g2.setFont(u8g2_font_5x7_tf);",
+        "u8g2.drawStr(0, 20, \"World\");",
+        "u8g2.setFont(u8g2_font_6x10_tf);",
+        "u8g2.drawStr(0, 30, \"Back\");",
+      ].join("\n"),
+    );
+  });
+
+  it("uses element.name for bitmap variable name when set", () => {
+    const screen: Screen = {
+      id: "screen-1",
+      name: "Main Screen",
+      elements: [
+        { ...screenWithImage.elements[0]! as Extract<Screen["elements"][number], { type: "image" }>, name: "logo" },
+      ],
+    };
+
+    expect(generateScreen(screen)).toContain("image_logo[]");
   });
 
   it("uses unique bitmap names", () => {
@@ -319,7 +370,61 @@ describe("generateScreen", () => {
   });
 });
 
+describe("generateScreenFunction", () => {
+  it("places bitmap declaration before the function", () => {
+    const project: Project = {
+      schemaVersion: 1,
+      name: "Demo",
+      device: { width: 128, height: 64 },
+      screens: [],
+      activeScreenId: "screen-1",
+    };
+
+    const output = generateScreenFunction(screenWithImage, project);
+    const bitmapIdx = output.indexOf("static const");
+    const fnIdx = output.indexOf("void ");
+    expect(bitmapIdx).toBeGreaterThanOrEqual(0);
+    expect(bitmapIdx).toBeLessThan(fnIdx);
+    expect(output).toContain("static const unsigned char image_logo_1[] PROGMEM = {\n  0x00, 0x3f\n};");
+    expect(output).toContain("u8g2.drawXBMP(2, 3, 16, 1, image_logo_1);");
+  });
+
+  it("returns only function when no images present", () => {
+    const project: Project = {
+      schemaVersion: 1,
+      name: "Demo",
+      device: { width: 128, height: 64 },
+      screens: [],
+      activeScreenId: "screen-1",
+    };
+
+    const output = generateScreenFunction(screenWithRect, project);
+    expect(output).toBe("void drawMainScreen() {\n  u8g2.drawFrame(0, 1, 10, 20);\n}");
+  });
+});
+
 describe("generateProject", () => {
+  it("places bitmap declarations before all functions", () => {
+    const project: Project = {
+      schemaVersion: 1,
+      name: "Demo",
+      device: { width: 128, height: 64 },
+      screens: [
+        { id: "screen-1", name: "Logo", elements: [screenWithImage.elements[0]!] },
+        { id: "screen-2", name: "Main", elements: [{ id: "r1", type: "rect", x: 0, y: 0, width: 10, height: 10, filled: false }] },
+      ],
+      activeScreenId: "screen-1",
+    };
+
+    const output = generateProject(project);
+    const bitmapIdx = output.indexOf("static const");
+    const fnIdx = output.indexOf("void ");
+    expect(bitmapIdx).toBeGreaterThanOrEqual(0);
+    expect(bitmapIdx).toBeLessThan(fnIdx);
+    expect(output).toContain("static const unsigned char image_logo_1[] PROGMEM = {\n  0x00, 0x3f\n};");
+    expect(output).toContain("u8g2.drawXBMP(2, 3, 16, 1, image_logo_1);");
+  });
+
   it("generates a function per screen", () => {
     const project: Project = {
       schemaVersion: 1,

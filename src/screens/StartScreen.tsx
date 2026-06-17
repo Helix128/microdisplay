@@ -34,10 +34,12 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
 
   useEffect(() => {
     let mounted = true;
+    const MIN_LOAD_MS = 300;
 
-    projectStorage
-      .listProjects()
-      .then((storedProjects) => {
+    const delay = new Promise<void>((resolve) => setTimeout(resolve, MIN_LOAD_MS));
+
+    Promise.all([projectStorage.listProjects(), delay])
+      .then(([storedProjects]) => {
         if (mounted) {
           setProjects(storedProjects);
         }
@@ -276,7 +278,10 @@ export function StartScreen({ onCreateProject }: StartScreenProps) {
 
         <div className="start-projects-body">
           {isLoadingProjects ? (
-            <p className="start-status">Cargando proyectos…</p>
+            <div className="projects-loading">
+              <span className="projects-spinner" aria-hidden="true" />
+              <p className="start-status">Cargando proyectos…</p>
+            </div>
           ) : null}
 
           {!isLoadingProjects && projects.length === 0 ? (

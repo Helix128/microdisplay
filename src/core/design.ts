@@ -46,6 +46,7 @@ export type TextElement = {
 export type ImageElement = {
   id: string;
   type: "image";
+  name?: string;
   x: number;
   y: number;
   width: number;
